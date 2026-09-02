@@ -1,0 +1,236 @@
+/*
+Copyright 2026 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package assetgraph
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
+
+	dya "github.com/kryntelxf/DYALEMCHIRZ/dya/api/asset/v1alpha1"
+	dyaclientset "github.com/kryntelxf/DYALEMCHIRZ/dya/pkg/generated/clientset/versioned"
+	dyainformers "github.com/kryntelxf/DYALEMCHIRZ/dya/pkg/generated/informers/externalversions"
+	dyalisters "github.com/kryntelxf/DYALEMCHIRZ/dya/pkg/generated/listers/asset/v1alpha1"
+)
+
+// Controller is the controller for Asset Graph
+type Controller struct {
+	// kubeClient is the Kubernetes clientset
+	kubeClient kubernetes.Interface
+
+	// dyaClient is the DYALEMCHIRZ clientset
+	dyaClient dyaclientset.Interface
+
+	// assetLister is the lister for Asset resources
+	assetLister dyalisters.AssetLister
+
+	// assetSynced is the informer sync function
+	assetSynced cache.InformerSynced
+
+	// workqueue is a rate limited work queue
+	workqueue workqueue.RateLimitingInterface
+
+	// recorder is an event recorder for recording events
+	recorder record.EventRecorder
+}
+
+// NewController returns a new Asset Graph controller
+func NewController(
+	config *rest.Config,
+) (*Controller, error) {
+	// Create Kubernetes clientset
+	kubeClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create kubernetes clientset: %v", err)
+	}
+
+	// Create DYALEMCHIRZ clientset
+	dyaClient, err := dyaclientset.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dya clientset: %v", err)
+	}
+
+	// Create informer factory for DYALEMCHIRZ resources
+	dyaInformerFactory := dyainformers.NewSharedInformerFactory(dyaClient, time.Second*30)
+
+	// Get Asset informer and lister
+	assetInformer := dyaInformerFactory.Dya().V1alpha1().Assets()
+	assetLister := assetInformer.Lister()
+	assetSynced := assetInformer.Informer().HasSynced
+
+	// Create workqueue
+	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+
+	controller := &Controller{
+		kubeClient:  kubeClient,
+		dyaClient:   dyaClient,
+		assetLister: assetLister,
+		assetSynced: assetSynced,
+		workqueue:   queue,
+	}
+
+	// Set up event handlers for Asset resources
+	assetInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueAsset,
+		UpdateFunc: func(old, new interface{}) {
+			controller.enqueueAsset(new)
+		},
+		DeleteFunc: controller.enqueueAsset,
+	})
+
+	// Set up event handlers for Kubernetes resources (Pod, Service, Node)
+	// This will be expanded in Phase 4
+
+	return controller, nil
+}
+
+// Run starts the controller
+func (c *Controller) Run(ctx context.Context, workers int) error {
+	defer utilruntime.HandleCrash()
+	defer c.workqueue.ShutDown()
+
+	klog.Info("Starting Asset Graph controller")
+
+	// Wait for informer caches to sync
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.assetSynced); !ok {
+		return fmt.Errorf("failed to wait for caches to sync")
+	}
+
+	klog.Info("Starting workers")
+	for i := 0; i < workers; i++ {
+		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
+	}
+
+	klog.Info("Started workers")
+	<-ctx.Done()
+	klog.Info("Shutting down workers")
+
+	return nil
+}
+
+// runWorker is the worker function
+func (c *Controller) runWorker(ctx context.Context) {
+	for c.processNextWorkItem(ctx) {
+	}
+}
+
+// processNextWorkItem processes a work item from the queue
+func (c *Controller) processNextWorkItem(ctx context.Context) bool {
+	obj, shutdown := c.workqueue.Get()
+	if shutdown {
+		return false
+	}
+
+	err := func(obj interface{}) error {
+		defer c.workqueue.Done(obj)
+
+		var key string
+		var ok bool
+		if key, ok = obj.(string); !ok {
+			c.workqueue.Forget(obj)
+			utilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
+			return nil
+		}
+
+		if err := c.reconcile(ctx, key); err != nil {
+			c.workqueue.AddRateLimited(key)
+			return fmt.Errorf("error syncing '%s': %s, requeuing", key, err.Error())
+		}
+
+		c.workqueue.Forget(obj)
+		klog.V(4).Infof("Successfully synced '%s'", key)
+		return nil
+	}(obj)
+
+	if err != nil {
+		utilruntime.HandleError(err)
+		return true
+	}
+
+	return true
+}
+
+// reconcile reconciles the Asset
+func (c *Controller) reconcile(ctx context.Context, key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+
+	// Get the Asset
+	asset, err := c.assetLister.Assets(namespace).Get(name)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.V(4).Infof("Asset %s/%s has been deleted", namespace, name)
+			return nil
+		}
+		return err
+	}
+
+	klog.V(4).Infof("Reconciling Asset %s/%s", namespace, name)
+
+	// Update status
+	asset.Status.ObservedGeneration = asset.Generation
+	asset.Status.LastSync = metav1.Now()
+
+	_, err = c.dyaClient.DyaV1alpha1().Assets(namespace).UpdateStatus(ctx, asset, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// enqueueAsset adds an Asset to the workqueue
+func (c *Controller) enqueueAsset(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.workqueue.Add(key)
+}
+
+// enqueueAssetForPod adds an Asset for a Pod to the workqueue
+func (c *Controller) enqueueAssetForPod(pod *corev1.Pod) {
+	// This will be implemented in Phase 4
+}
+
+// enqueueAssetForService adds an Asset for a Service to the workqueue
+func (c *Controller) enqueueAssetForService(service *corev1.Service) {
+	// This will be implemented in Phase 4
+}
+
+// enqueueAssetForNode adds an Asset for a Node to the workqueue
+func (c *Controller) enqueueAssetForNode(node *corev1.Node) {
+	// This will be implemented in Phase 4
+}
