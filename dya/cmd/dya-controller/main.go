@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -24,8 +25,24 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
+
+	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 )
+
+var (
+	masterURL  string
+	kubeconfig string
+	workers    int
+)
+
+func init() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	flag.IntVar(&workers, "workers", 1, "Number of worker threads for controllers.")
+}
 
 func main() {
 	klog.InitFlags(nil)
@@ -36,37 +53,65 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 1: Foundation                                       ║")
+	fmt.Println("║   Phase 3: Asset Graph                                      ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
 	klog.Info("DYALEMCHIRZ controller starting...")
 
+	// Get Kubernetes config
+	cfg, err := getConfig()
+	if err != nil {
+		klog.Fatalf("Failed to get Kubernetes config: %v", err)
+	}
+
+	// Setup signal handling for graceful shutdown
 	stopCh := make(chan struct{})
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		<-signalCh
-		klog.Info("Received shutdown signal")
+		klog.Info("Received shutdown signal, stopping...")
 		close(stopCh)
+	}()
+
+	// Create Asset Graph controller
+	klog.Info("Creating Asset Graph controller...")
+	assetGraphController, err := assetgraph.NewController(cfg)
+	if err != nil {
+		klog.Fatalf("Failed to create Asset Graph controller: %v", err)
+	}
+
+	// Start Asset Graph controller
+	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		if err := assetGraphController.Run(ctx, workers); err != nil {
+			klog.Fatalf("Asset Graph controller failed: %v", err)
+		}
 	}()
 
 	klog.Info("Controller is running. Press Ctrl+C to stop")
 
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
+	// Wait for shutdown signal
+	<-stopCh
+	klog.Info("Shutting down gracefully...")
+	cancel()
 
-	for {
-		select {
-		case <-stopCh:
-			klog.Info("Shutting down gracefully...")
-			time.Sleep(2 * time.Second)
-			klog.Info("Shutdown complete")
-			return
-		case <-ticker.C:
-			klog.V(4).Info("Heartbeat: controller is running")
-		}
+	// Give controllers time to clean up
+	time.Sleep(2 * time.Second)
+	klog.Info("Shutdown complete")
+}
+
+// getConfig returns the rest.Config for the Kubernetes API server
+func getConfig() (*rest.Config, error) {
+	// Use kubeconfig if provided, otherwise use in-cluster config
+	if kubeconfig != "" {
+		return clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	}
+	return rest.InClusterConfig()
 }
