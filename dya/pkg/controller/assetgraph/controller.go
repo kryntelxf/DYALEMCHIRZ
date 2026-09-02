@@ -21,21 +21,27 @@ import (
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+)
 
-	"k8s.io/kubernetes/dya/api/asset/v1alpha1"
-	dyaclientset "k8s.io/kubernetes/dya/pkg/generated/clientset/versioned"
-	dyainformers "k8s.io/kubernetes/dya/pkg/generated/informers/externalversions"
-	dyalisters "k8s.io/kubernetes/dya/pkg/generated/listers/asset/v1alpha1"
+var (
+	assetGVR = schema.GroupVersionResource{
+		Group:    "dya.kryntelxf.com",
+		Version:  "v1alpha1",
+		Resource: "assets",
+	}
 )
 
 // Controller is the controller for Asset Graph
@@ -43,14 +49,11 @@ type Controller struct {
 	// kubeClient is the Kubernetes clientset
 	kubeClient kubernetes.Interface
 
-	// dyaClient is the DYALEMCHIRZ clientset
-	dyaClient dyaclientset.Interface
+	// dynamicClient is the dynamic clientset for CRD resources
+	dynamicClient dynamic.Interface
 
-	// assetLister is the lister for Asset resources
-	assetLister dyalisters.AssetLister
-
-	// assetSynced is the informer sync function
-	assetSynced cache.InformerSynced
+	// assetInformer is the informer for Asset resources
+	assetInformer cache.SharedIndexInformer
 
 	// workqueue is a rate limited work queue
 	workqueue workqueue.RateLimitingInterface
@@ -64,33 +67,30 @@ func NewController(config *rest.Config) (*Controller, error) {
 		return nil, fmt.Errorf("failed to create kubernetes clientset: %v", err)
 	}
 
-	// Create DYALEMCHIRZ clientset
-	dyaClient, err := dyaclientset.NewForConfig(config)
+	// Create dynamic clientset
+	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create dya clientset: %v", err)
+		return nil, fmt.Errorf("failed to create dynamic clientset: %v", err)
 	}
 
-	// Create informer factory for DYALEMCHIRZ resources
-	dyaInformerFactory := dyainformers.NewSharedInformerFactory(dyaClient, time.Second*30)
+	// Create dynamic informer factory
+	dynamicFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, time.Second*30)
 
-	// Get Asset informer and lister
-	assetInformer := dyaInformerFactory.Dya().V1alpha1().Assets()
-	assetLister := assetInformer.Lister()
-	assetSynced := assetInformer.Informer().HasSynced
+	// Get Asset informer
+	assetInformer := dynamicFactory.ForResource(assetGVR).Informer()
 
 	// Create workqueue
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	controller := &Controller{
-		kubeClient:  kubeClient,
-		dyaClient:   dyaClient,
-		assetLister: assetLister,
-		assetSynced: assetSynced,
-		workqueue:   queue,
+		kubeClient:    kubeClient,
+		dynamicClient: dynamicClient,
+		assetInformer: assetInformer,
+		workqueue:     queue,
 	}
 
 	// Set up event handlers for Asset resources
-	assetInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	assetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueAsset,
 		UpdateFunc: func(old, new interface{}) {
 			controller.enqueueAsset(new)
@@ -109,7 +109,7 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	klog.Info("Starting Asset Graph controller")
 
 	// Wait for informer caches to sync
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.assetSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.assetInformer.HasSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -175,27 +175,59 @@ func (c *Controller) reconcile(ctx context.Context, key string) error {
 		return nil
 	}
 
-	// Get the Asset
-	asset, err := c.assetLister.Assets(namespace).Get(name)
+	// Get the Asset from informer cache
+	obj, exists, err := c.assetInformer.GetStore().GetByKey(key)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			klog.V(4).Infof("Asset %s/%s has been deleted", namespace, name)
-			return nil
-		}
 		return err
+	}
+	if !exists {
+		klog.V(4).Infof("Asset %s/%s has been deleted", namespace, name)
+		return nil
+	}
+
+	asset, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return fmt.Errorf("object is not an unstructured: %v", obj)
 	}
 
 	klog.V(4).Infof("Reconciling Asset %s/%s", namespace, name)
 
 	// Update status
-	asset.Status.ObservedGeneration = asset.Generation
-	asset.Status.LastSync = metav1.Now()
-
-	_, err = c.dyaClient.DyaV1alpha1().Assets(namespace).UpdateStatus(ctx, asset, metav1.UpdateOptions{})
-	if err != nil {
+	if err := c.updateAssetStatus(ctx, namespace, name, asset); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+// updateAssetStatus updates the status of an Asset
+func (c *Controller) updateAssetStatus(ctx context.Context, namespace, name string, asset *unstructured.Unstructured) error {
+	// Get the current asset from API (not cache)
+	currentAsset, err := c.dynamicClient.Resource(assetGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.V(4).Infof("Asset %s/%s not found", namespace, name)
+			return nil
+		}
+		return fmt.Errorf("failed to get asset: %v", err)
+	}
+
+	// Update status
+	status := map[string]interface{}{
+		"observedGeneration": asset.GetGeneration(),
+		"lastSync":           metav1.Now().Format(time.RFC3339),
+	}
+
+	if err := unstructured.SetNestedField(currentAsset.Object, status, "status"); err != nil {
+		return fmt.Errorf("failed to set status: %v", err)
+	}
+
+	_, err = c.dynamicClient.Resource(assetGVR).Namespace(namespace).UpdateStatus(ctx, currentAsset, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to update status: %v", err)
+	}
+
+	klog.V(4).Infof("Updated status for Asset %s/%s", namespace, name)
 	return nil
 }
 
