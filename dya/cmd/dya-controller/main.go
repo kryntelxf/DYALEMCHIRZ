@@ -31,10 +31,17 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	fmt.Println("🚀 DYALEMCHIRZ Controller starting...")
-	fmt.Println("Phase 1: Foundation")
+	fmt.Println("╔══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║                                                              ║")
+	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
+	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
+	fmt.Println("║                                                              ║")
+	fmt.Println("║   Phase 1: Foundation                                       ║")
+	fmt.Println("║   Version: 0.1.0                                            ║")
+	fmt.Println("║                                                              ║")
+	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
-	klog.Info("DYALEMCHIRZ controller is running")
+	klog.Info("DYALEMCHIRZ controller starting...")
 
 	stopCh := make(chan struct{})
 	signalCh := make(chan os.Signal, 1)
@@ -46,17 +53,20 @@ func main() {
 		close(stopCh)
 	}()
 
+	klog.Info("Controller is running. Press Ctrl+C to stop")
+
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-stopCh:
-			klog.Info("Shutting down...")
+			klog.Info("Shutting down gracefully...")
 			time.Sleep(2 * time.Second)
+			klog.Info("Shutdown complete")
 			return
 		case <-ticker.C:
-			klog.V(4).Info("Heartbeat: running")
+			klog.V(4).Info("Heartbeat: controller is running")
 		}
 	}
 }
