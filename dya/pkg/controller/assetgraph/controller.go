@@ -24,20 +24,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	dya "github.com/kryntelxf/DYALEMCHIRZ/dya/api/asset/v1alpha1"
-	dyaclientset "github.com/kryntelxf/DYALEMCHIRZ/dya/pkg/generated/clientset/versioned"
-	dyainformers "github.com/kryntelxf/DYALEMCHIRZ/dya/pkg/generated/informers/externalversions"
-	dyalisters "github.com/kryntelxf/DYALEMCHIRZ/dya/pkg/generated/listers/asset/v1alpha1"
+	"k8s.io/kubernetes/dya/api/asset/v1alpha1"
+	dyaclientset "k8s.io/kubernetes/dya/pkg/generated/clientset/versioned"
+	dyainformers "k8s.io/kubernetes/dya/pkg/generated/informers/externalversions"
+	dyalisters "k8s.io/kubernetes/dya/pkg/generated/listers/asset/v1alpha1"
 )
 
 // Controller is the controller for Asset Graph
@@ -56,15 +54,10 @@ type Controller struct {
 
 	// workqueue is a rate limited work queue
 	workqueue workqueue.RateLimitingInterface
-
-	// recorder is an event recorder for recording events
-	recorder record.EventRecorder
 }
 
 // NewController returns a new Asset Graph controller
-func NewController(
-	config *rest.Config,
-) (*Controller, error) {
+func NewController(config *rest.Config) (*Controller, error) {
 	// Create Kubernetes clientset
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -104,9 +97,6 @@ func NewController(
 		},
 		DeleteFunc: controller.enqueueAsset,
 	})
-
-	// Set up event handlers for Kubernetes resources (Pod, Service, Node)
-	// This will be expanded in Phase 4
 
 	return controller, nil
 }
@@ -218,19 +208,4 @@ func (c *Controller) enqueueAsset(obj interface{}) {
 		return
 	}
 	c.workqueue.Add(key)
-}
-
-// enqueueAssetForPod adds an Asset for a Pod to the workqueue
-func (c *Controller) enqueueAssetForPod(pod *corev1.Pod) {
-	// This will be implemented in Phase 4
-}
-
-// enqueueAssetForService adds an Asset for a Service to the workqueue
-func (c *Controller) enqueueAssetForService(service *corev1.Service) {
-	// This will be implemented in Phase 4
-}
-
-// enqueueAssetForNode adds an Asset for a Node to the workqueue
-func (c *Controller) enqueueAssetForNode(node *corev1.Node) {
-	// This will be implemented in Phase 4
 }
