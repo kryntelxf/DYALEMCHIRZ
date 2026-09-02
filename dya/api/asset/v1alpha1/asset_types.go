@@ -95,7 +95,3 @@ type AssetList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Asset `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Asset{}, &AssetList{})
-}
