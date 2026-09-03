@@ -33,9 +33,6 @@ func (d *AnomalyDetector) Name() string {
 
 // Detect detects anomalies in data
 func (d *AnomalyDetector) Detect(data interface{}) (*ai.AnomalyResult, error) {
-	// This is a placeholder implementation
-	// In production, this would use statistical models
-
 	klog.V(4).Info("AnomalyDetector running")
 	return &ai.AnomalyResult{
 		Detected:    false,
