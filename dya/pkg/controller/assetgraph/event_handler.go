@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 )
 
@@ -175,12 +174,12 @@ func (c *Controller) nodeToAsset(node *corev1.Node) *unstructured.Unstructured {
 					"node": node.Name,
 				},
 				"properties": map[string]interface{}{
-					"nodeIP":        getNodeInternalIP(node),
-					"nodeName":      node.Name,
-					"architecture":  node.Status.NodeInfo.Architecture,
-					"os":            node.Status.NodeInfo.OperatingSystem,
+					"nodeIP":         getNodeInternalIP(node),
+					"nodeName":       node.Name,
+					"architecture":   node.Status.NodeInfo.Architecture,
+					"os":             node.Status.NodeInfo.OperatingSystem,
 					"kubeletVersion": node.Status.NodeInfo.KubeletVersion,
-					"created":       node.CreationTimestamp.Format("2006-01-02T15:04:05Z"),
+					"created":        node.CreationTimestamp.Format("2006-01-02T15:04:05Z"),
 				},
 				"health": map[string]interface{}{
 					"status": getNodeStatus(node),
