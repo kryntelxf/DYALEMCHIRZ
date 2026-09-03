@@ -29,6 +29,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
+	"k8s.io/kubernetes/dya/pkg/ai"
+	"k8s.io/kubernetes/dya/pkg/ai/detectors"
+	"k8s.io/kubernetes/dya/pkg/ai/predictors"
+	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 )
 
@@ -53,7 +57,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 3: Asset Graph                                      ║")
+	fmt.Println("║   Phase 5: AI Engine                                        ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -77,6 +81,25 @@ func main() {
 		close(stopCh)
 	}()
 
+	// Create AI Engine
+	klog.Info("Creating AI Engine...")
+	aiEngine := ai.NewEngine()
+
+	// Register AI components
+	klog.Info("Registering AI components...")
+	aiEngine.RegisterDetector(&detectors.HealthDetector{})
+	aiEngine.RegisterDetector(&detectors.AnomalyDetector{})
+	aiEngine.RegisterScorer(&scorers.RiskScorer{})
+	aiEngine.RegisterScorer(&scorers.HealthScorer{})
+	aiEngine.RegisterPredictor(&predictors.FailurePredictor{})
+	aiEngine.RegisterPredictor(&predictors.ResourcePredictor{})
+
+	// Start AI Engine
+	klog.Info("Starting AI Engine...")
+	aiEngine.Start()
+	defer aiEngine.Stop()
+	klog.Info("AI Engine started successfully")
+
 	// Create Asset Graph controller
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -95,7 +118,12 @@ func main() {
 		}
 	}()
 
-	klog.Info("Controller is running. Press Ctrl+C to stop")
+	klog.Info("All components started successfully")
+	klog.Info("DYALEMCHIRZ is ready")
+	klog.Info("Components running:")
+	klog.Info("  - AI Engine (anomaly detection, risk scoring, prediction)")
+	klog.Info("  - Asset Graph Controller")
+	klog.Info("Press Ctrl+C to stop")
 
 	// Wait for shutdown signal
 	<-stopCh
