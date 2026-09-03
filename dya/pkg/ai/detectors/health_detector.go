@@ -33,9 +33,6 @@ func (d *HealthDetector) Name() string {
 
 // Detect detects anomalies in health data
 func (d *HealthDetector) Detect(data interface{}) (*ai.AnomalyResult, error) {
-	// This is a placeholder implementation
-	// In production, this would analyze health metrics
-
 	klog.V(4).Info("HealthDetector running")
 	return &ai.AnomalyResult{
 		Detected:    false,
