@@ -27,101 +27,66 @@ import (
 type Engine struct {
 	mu sync.RWMutex
 
-	// Anomaly detectors
-	detectors []AnomalyDetector
-
-	// Event correlators
+	detectors   []AnomalyDetector
 	correlators []EventCorrelator
-
-	// Risk scorers
-	scorers []RiskScorer
-
-	// Predictors
-	predictors []Predictor
-
-	// Running state
-	running bool
+	scorers     []RiskScorer
+	predictors  []Predictor
+	running     bool
 }
 
 // AnomalyDetector defines the interface for anomaly detection
 type AnomalyDetector interface {
-	// Detect detects anomalies in the given data
 	Detect(data interface{}) (*AnomalyResult, error)
-	// Name returns the name of the detector
 	Name() string
 }
 
 // EventCorrelator defines the interface for event correlation
 type EventCorrelator interface {
-	// Correlate correlates events
 	Correlate(events []interface{}) (*CorrelationResult, error)
-	// Name returns the name of the correlator
 	Name() string
 }
 
 // RiskScorer defines the interface for risk scoring
 type RiskScorer interface {
-	// Score calculates risk score for an asset
 	Score(asset interface{}) (*RiskScore, error)
-	// Name returns the name of the scorer
 	Name() string
 }
 
 // Predictor defines the interface for prediction
 type Predictor interface {
-	// Predict predicts future state
 	Predict(data interface{}) (*PredictionResult, error)
-	// Name returns the name of the predictor
 	Name() string
 }
 
 // AnomalyResult represents the result of anomaly detection
 type AnomalyResult struct {
-	// Detected is true if anomaly is detected
-	Detected bool `json:"detected"`
-	// Score is the anomaly score (0-100)
-	Score float64 `json:"score"`
-	// Severity is the severity level (low, medium, high, critical)
-	Severity string `json:"severity"`
-	// Description describes the anomaly
-	Description string `json:"description"`
-	// Timestamp is the time of detection
-	Timestamp time.Time `json:"timestamp"`
+	Detected    bool      `json:"detected"`
+	Score       float64   `json:"score"`
+	Severity    string    `json:"severity"`
+	Description string    `json:"description"`
+	Timestamp   time.Time `json:"timestamp"`
 }
 
 // CorrelationResult represents the result of event correlation
 type CorrelationResult struct {
-	// IncidentID is the unique ID of the incident
-	IncidentID string `json:"incidentId"`
-	// Events are the correlated events
-	Events []interface{} `json:"events"`
-	// RootCause is the suspected root cause
-	RootCause string `json:"rootCause"`
-	// Confidence is the confidence level (0-100)
-	Confidence float64 `json:"confidence"`
+	IncidentID string        `json:"incidentId"`
+	Events     []interface{} `json:"events"`
+	RootCause  string        `json:"rootCause"`
+	Confidence float64       `json:"confidence"`
 }
 
 // RiskScore represents the risk score of an asset
 type RiskScore struct {
-	// AssetID is the ID of the asset
-	AssetID string `json:"assetId"`
-	// Score is the risk score (0-100)
-	Score float64 `json:"score"`
-	// Factors are the contributing factors
-	Factors map[string]float64 `json:"factors"`
-	// Timestamp is the time of scoring
-	Timestamp time.Time `json:"timestamp"`
+	AssetID   string             `json:"assetId"`
+	Score     float64            `json:"score"`
+	Factors   map[string]float64 `json:"factors"`
+	Timestamp time.Time          `json:"timestamp"`
 }
 
 // PredictionResult represents the result of prediction
 type PredictionResult struct {
-	// PredictedState is the predicted state
-	PredictedState string `json:"predictedState"`
-	// Confidence is the confidence level (0-100)
-	Confidence float64 `json:"confidence"`
-	// TimeToFailure is the estimated time to failure (if applicable)
-	TimeToFailure *time.Duration `json:"timeToFailure,omitempty"`
-	// Recommendations are suggested actions
+	PredictedState string   `json:"predictedState"`
+	Confidence     float64  `json:"confidence"`
 	Recommendations []string `json:"recommendations"`
 }
 
