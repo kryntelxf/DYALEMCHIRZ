@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -29,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -55,6 +57,9 @@ type Controller struct {
 	// assetInformer is the informer for Asset resources
 	assetInformer cache.SharedIndexInformer
 
+	// coreInformerFactory is the informer factory for core resources
+	coreInformerFactory informers.SharedInformerFactory
+
 	// workqueue is a rate limited work queue
 	workqueue workqueue.RateLimitingInterface
 }
@@ -79,14 +84,18 @@ func NewController(config *rest.Config) (*Controller, error) {
 	// Get Asset informer
 	assetInformer := dynamicFactory.ForResource(assetGVR).Informer()
 
+	// Create core informer factory
+	coreInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*30)
+
 	// Create workqueue
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	controller := &Controller{
-		kubeClient:    kubeClient,
-		dynamicClient: dynamicClient,
-		assetInformer: assetInformer,
-		workqueue:     queue,
+		kubeClient:           kubeClient,
+		dynamicClient:        dynamicClient,
+		assetInformer:        assetInformer,
+		coreInformerFactory:  coreInformerFactory,
+		workqueue:            queue,
 	}
 
 	// Set up event handlers for Asset resources
@@ -96,6 +105,30 @@ func NewController(config *rest.Config) (*Controller, error) {
 			controller.enqueueAsset(new)
 		},
 		DeleteFunc: controller.enqueueAsset,
+	})
+
+	// Set up event handlers for Pods
+	podInformer := coreInformerFactory.Core().V1().Pods()
+	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.handlePod,
+		UpdateFunc: func(old, new interface{}) { controller.handlePod(new) },
+		DeleteFunc: controller.handlePodDelete,
+	})
+
+	// Set up event handlers for Services
+	serviceInformer := coreInformerFactory.Core().V1().Services()
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.handleService,
+		UpdateFunc: func(old, new interface{}) { controller.handleService(new) },
+		DeleteFunc: controller.handleServiceDelete,
+	})
+
+	// Set up event handlers for Nodes
+	nodeInformer := coreInformerFactory.Core().V1().Nodes()
+	nodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.handleNode,
+		UpdateFunc: func(old, new interface{}) { controller.handleNode(new) },
+		DeleteFunc: controller.handleNodeDelete,
 	})
 
 	return controller, nil
@@ -108,12 +141,25 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 
 	klog.Info("Starting Asset Graph controller")
 
+	// Start informer factories
+	c.coreInformerFactory.Start(ctx.Done())
+	c.assetInformer.GetController().Run(ctx.Done())
+
 	// Wait for informer caches to sync
+	klog.Info("Waiting for informer caches to sync...")
 	if ok := cache.WaitForCacheSync(ctx.Done(), c.assetInformer.HasSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
+	if ok := cache.WaitForCacheSync(ctx.Done(),
+		c.coreInformerFactory.Core().V1().Pods().Informer().HasSynced,
+		c.coreInformerFactory.Core().V1().Services().Informer().HasSynced,
+		c.coreInformerFactory.Core().V1().Nodes().Informer().HasSynced,
+	); !ok {
+		return fmt.Errorf("failed to wait for core caches to sync")
+	}
+	klog.Info("Informer caches synced")
 
-	klog.Info("Starting workers")
+	klog.Infof("Starting %d workers", workers)
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
@@ -240,4 +286,34 @@ func (c *Controller) enqueueAsset(obj interface{}) {
 		return
 	}
 	c.workqueue.Add(key)
+}
+
+// ==================== DELETE HANDLERS ====================
+
+// handlePodDelete handles Pod deletion
+func (c *Controller) handlePodDelete(obj interface{}) {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return
+	}
+	klog.V(4).Infof("Pod deleted: %s/%s", pod.Namespace, pod.Name)
+	// Optionally delete the Asset or mark as deleted
+}
+
+// handleServiceDelete handles Service deletion
+func (c *Controller) handleServiceDelete(obj interface{}) {
+	service, ok := obj.(*corev1.Service)
+	if !ok {
+		return
+	}
+	klog.V(4).Infof("Service deleted: %s/%s", service.Namespace, service.Name)
+}
+
+// handleNodeDelete handles Node deletion
+func (c *Controller) handleNodeDelete(obj interface{}) {
+	node, ok := obj.(*corev1.Node)
+	if !ok {
+		return
+	}
+	klog.V(4).Infof("Node deleted: %s", node.Name)
 }
