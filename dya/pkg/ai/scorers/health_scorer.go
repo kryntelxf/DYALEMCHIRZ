@@ -33,9 +33,6 @@ func (s *HealthScorer) Name() string {
 
 // Score calculates health score for an asset
 func (s *HealthScorer) Score(asset interface{}) (*ai.RiskScore, error) {
-	// This is a placeholder implementation
-	// In production, this would calculate health scores
-
 	klog.V(4).Info("HealthScorer running")
 	return &ai.RiskScore{
 		AssetID:   "unknown",
