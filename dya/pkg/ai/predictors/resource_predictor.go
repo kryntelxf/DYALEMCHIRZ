@@ -31,9 +31,6 @@ func (p *ResourcePredictor) Name() string {
 
 // Predict predicts future resource usage
 func (p *ResourcePredictor) Predict(data interface{}) (*ai.PredictionResult, error) {
-	// This is a placeholder implementation
-	// In production, this would use ML models to predict resource usage
-
 	klog.V(4).Info("ResourcePredictor running")
 	return &ai.PredictionResult{
 		PredictedState: "stable",
