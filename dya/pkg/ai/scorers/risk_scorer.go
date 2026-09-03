@@ -33,9 +33,6 @@ func (s *RiskScorer) Name() string {
 
 // Score calculates risk score for an asset
 func (s *RiskScorer) Score(asset interface{}) (*ai.RiskScore, error) {
-	// This is a placeholder implementation
-	// In production, this would calculate risk based on multiple factors
-
 	klog.V(4).Info("RiskScorer running")
 	return &ai.RiskScore{
 		AssetID:   "unknown",
