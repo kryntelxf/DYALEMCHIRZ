@@ -17,8 +17,6 @@ limitations under the License.
 package predictors
 
 import (
-	"time"
-
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/dya/pkg/ai"
 )
