@@ -91,11 +91,11 @@ func NewController(config *rest.Config) (*Controller, error) {
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	controller := &Controller{
-		kubeClient:           kubeClient,
-		dynamicClient:        dynamicClient,
-		assetInformer:        assetInformer,
-		coreInformerFactory:  coreInformerFactory,
-		workqueue:            queue,
+		kubeClient:          kubeClient,
+		dynamicClient:       dynamicClient,
+		assetInformer:       assetInformer,
+		coreInformerFactory: coreInformerFactory,
+		workqueue:           queue,
 	}
 
 	// Set up event handlers for Asset resources
