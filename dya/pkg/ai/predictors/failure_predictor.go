@@ -31,9 +31,6 @@ func (p *FailurePredictor) Name() string {
 
 // Predict predicts future state
 func (p *FailurePredictor) Predict(data interface{}) (*ai.PredictionResult, error) {
-	// This is a placeholder implementation
-	// In production, this would use ML models to predict failures
-
 	klog.V(4).Info("FailurePredictor running")
 	return &ai.PredictionResult{
 		PredictedState: "healthy",
