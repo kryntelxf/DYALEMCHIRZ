@@ -25,8 +25,7 @@ import (
 
 // Engine is the AI engine for DYALEMCHIRZ
 type Engine struct {
-	mu sync.RWMutex
-
+	mu          sync.RWMutex
 	detectors   []AnomalyDetector
 	correlators []EventCorrelator
 	scorers     []RiskScorer
@@ -85,8 +84,8 @@ type RiskScore struct {
 
 // PredictionResult represents the result of prediction
 type PredictionResult struct {
-	PredictedState string   `json:"predictedState"`
-	Confidence     float64  `json:"confidence"`
+	PredictedState  string   `json:"predictedState"`
+	Confidence      float64  `json:"confidence"`
 	Recommendations []string `json:"recommendations"`
 }
 
