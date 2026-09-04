@@ -23,15 +23,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai"
 )
 
-// RiskScorer calculates risk scores
 type RiskScorer struct{}
 
-// Name returns the name of the scorer
 func (s *RiskScorer) Name() string {
 	return "risk-scorer"
 }
 
-// Score calculates risk score for an asset
 func (s *RiskScorer) Score(asset interface{}) (*ai.RiskScore, error) {
 	klog.V(4).Info("RiskScorer running")
 	return &ai.RiskScore{
