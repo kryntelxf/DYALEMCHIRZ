@@ -34,6 +34,10 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
+	"k8s.io/kubernetes/dya/pkg/resilience"
+	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
+	"k8s.io/kubernetes/dya/pkg/resilience/detectors"
+	"k8s.io/kubernetes/dya/pkg/resilience/planners"
 )
 
 var (
@@ -57,7 +61,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 5: AI Engine                                        ║")
+	fmt.Println("║   Phase 6: Resilience Engine                                ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -81,7 +85,9 @@ func main() {
 		close(stopCh)
 	}()
 
-	// Create AI Engine
+	// ============================================
+	// 1. CREATE AI ENGINE
+	// ============================================
 	klog.Info("Creating AI Engine...")
 	aiEngine := ai.NewEngine()
 
@@ -100,7 +106,27 @@ func main() {
 	defer aiEngine.Stop()
 	klog.Info("AI Engine started successfully")
 
-	// Create Asset Graph controller
+	// ============================================
+	// 2. CREATE RESILIENCE ENGINE
+	// ============================================
+	klog.Info("Creating Resilience Engine...")
+	resilienceEngine := resilience.NewEngine()
+
+	// Register Resilience components
+	klog.Info("Registering Resilience components...")
+	resilienceEngine.RegisterHealthChecker(&checkers.HealthChecker{})
+	resilienceEngine.RegisterFailureDetector(&detectors.FailureDetector{})
+	resilienceEngine.RegisterRecoveryPlanner(&planners.RecoveryPlanner{})
+
+	// Start Resilience Engine
+	klog.Info("Starting Resilience Engine...")
+	resilienceEngine.Start()
+	defer resilienceEngine.Stop()
+	klog.Info("Resilience Engine started successfully")
+
+	// ============================================
+	// 3. CREATE ASSET GRAPH CONTROLLER
+	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
 	if err != nil {
@@ -118,11 +144,19 @@ func main() {
 		}
 	}()
 
+	// ============================================
+	// 4. ALL COMPONENTS STARTED
+	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
-	klog.Info("Components running:")
-	klog.Info("  - AI Engine (anomaly detection, risk scoring, prediction)")
-	klog.Info("  - Asset Graph Controller")
+	klog.Info("")
+	klog.Info("╔══════════════════════════════════════════════════════════════╗")
+	klog.Info("║  Components Running:                                         ║")
+	klog.Info("║  ✅ AI Engine (anomaly detection, risk scoring, prediction)   ║")
+	klog.Info("║  ✅ Resilience Engine (health, failure, recovery)             ║")
+	klog.Info("║  ✅ Asset Graph Controller                                   ║")
+	klog.Info("╚══════════════════════════════════════════════════════════════╝")
+	klog.Info("")
 	klog.Info("Press Ctrl+C to stop")
 
 	// Wait for shutdown signal
