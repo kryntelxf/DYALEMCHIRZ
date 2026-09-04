@@ -23,15 +23,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai"
 )
 
-// AnomalyDetector detects anomalies
 type AnomalyDetector struct{}
 
-// Name returns the name of the detector
 func (d *AnomalyDetector) Name() string {
 	return "anomaly-detector"
 }
 
-// Detect detects anomalies in data
 func (d *AnomalyDetector) Detect(data interface{}) (*ai.AnomalyResult, error) {
 	klog.V(4).Info("AnomalyDetector running")
 	return &ai.AnomalyResult{
