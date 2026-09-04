@@ -35,8 +35,8 @@ func (s *HealthScorer) Name() string {
 func (s *HealthScorer) Score(asset interface{}) (*ai.RiskScore, error) {
 	klog.V(4).Info("HealthScorer running")
 	return &ai.RiskScore{
-		AssetID:   "unknown",
-		Score:     100.0,
+		AssetID: "unknown",
+		Score:   100.0,
 		Factors: map[string]float64{
 			"health": 100.0,
 		},
