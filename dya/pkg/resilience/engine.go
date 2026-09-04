@@ -25,8 +25,7 @@ import (
 
 // Engine is the Resilience Engine for DYALEMCHIRZ
 type Engine struct {
-	mu sync.RWMutex
-
+	mu               sync.RWMutex
 	healthCheckers   []HealthChecker
 	failureDetectors []FailureDetector
 	recoveryPlanners []RecoveryPlanner
