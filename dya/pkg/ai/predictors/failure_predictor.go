@@ -21,15 +21,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai"
 )
 
-// FailurePredictor predicts potential failures
 type FailurePredictor struct{}
 
-// Name returns the name of the predictor
 func (p *FailurePredictor) Name() string {
 	return "failure-predictor"
 }
 
-// Predict predicts future state
 func (p *FailurePredictor) Predict(data interface{}) (*ai.PredictionResult, error) {
 	klog.V(4).Info("FailurePredictor running")
 	return &ai.PredictionResult{
