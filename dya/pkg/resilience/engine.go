@@ -27,17 +27,10 @@ import (
 type Engine struct {
 	mu sync.RWMutex
 
-	// Health checkers
-	healthCheckers []HealthChecker
-
-	// Failure detectors
+	healthCheckers   []HealthChecker
 	failureDetectors []FailureDetector
-
-	// Recovery planners
 	recoveryPlanners []RecoveryPlanner
-
-	// Running state
-	running bool
+	running          bool
 }
 
 // HealthChecker defines the interface for health checking
@@ -60,29 +53,29 @@ type RecoveryPlanner interface {
 
 // HealthStatus represents the health status of an asset
 type HealthStatus struct {
-	AssetID     string    `json:"assetId"`
-	Status      string    `json:"status"` // Healthy, Degraded, Unhealthy, Unknown
-	Score       float64   `json:"score"`
-	Message     string    `json:"message"`
-	Timestamp   time.Time `json:"timestamp"`
+	AssetID   string    `json:"assetId"`
+	Status    string    `json:"status"`
+	Score     float64   `json:"score"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // Failure represents a detected failure
 type Failure struct {
 	AssetID     string    `json:"assetId"`
 	Type        string    `json:"type"`
-	Severity    string    `json:"severity"` // Low, Medium, High, Critical
+	Severity    string    `json:"severity"`
 	Description string    `json:"description"`
 	Timestamp   time.Time `json:"timestamp"`
 }
 
 // RecoveryPlan represents a recovery plan
 type RecoveryPlan struct {
-	AssetID         string   `json:"assetId"`
-	Steps           []string `json:"steps"`
-	EstimatedTime   string   `json:"estimatedTime"`
-	Priority        int      `json:"priority"`
-	RequiresApproval bool   `json:"requiresApproval"`
+	AssetID          string   `json:"assetId"`
+	Steps            []string `json:"steps"`
+	EstimatedTime    string   `json:"estimatedTime"`
+	Priority         int      `json:"priority"`
+	RequiresApproval bool     `json:"requiresApproval"`
 }
 
 // NewEngine creates a new Resilience Engine
