@@ -23,15 +23,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/resilience"
 )
 
-// HealthChecker checks asset health
 type HealthChecker struct{}
 
-// Name returns the name of the checker
 func (c *HealthChecker) Name() string {
 	return "health-checker"
 }
 
-// Check checks the health of an asset
 func (c *HealthChecker) Check(asset interface{}) (*resilience.HealthStatus, error) {
 	klog.V(4).Info("HealthChecker running")
 	return &resilience.HealthStatus{
