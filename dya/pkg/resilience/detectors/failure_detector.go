@@ -21,15 +21,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/resilience"
 )
 
-// FailureDetector detects failures
 type FailureDetector struct{}
 
-// Name returns the name of the detector
 func (d *FailureDetector) Name() string {
 	return "failure-detector"
 }
 
-// Detect detects failures
 func (d *FailureDetector) Detect(asset interface{}) (*resilience.Failure, error) {
 	klog.V(4).Info("FailureDetector running")
 	return nil, nil
