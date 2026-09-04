@@ -21,15 +21,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai"
 )
 
-// ResourcePredictor predicts resource usage
 type ResourcePredictor struct{}
 
-// Name returns the name of the predictor
 func (p *ResourcePredictor) Name() string {
 	return "resource-predictor"
 }
 
-// Predict predicts future resource usage
 func (p *ResourcePredictor) Predict(data interface{}) (*ai.PredictionResult, error) {
 	klog.V(4).Info("ResourcePredictor running")
 	return &ai.PredictionResult{
