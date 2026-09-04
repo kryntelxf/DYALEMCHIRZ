@@ -23,15 +23,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai"
 )
 
-// HealthDetector detects anomalies in health status
 type HealthDetector struct{}
 
-// Name returns the name of the detector
 func (d *HealthDetector) Name() string {
 	return "health-detector"
 }
 
-// Detect detects anomalies in health data
 func (d *HealthDetector) Detect(data interface{}) (*ai.AnomalyResult, error) {
 	klog.V(4).Info("HealthDetector running")
 	return &ai.AnomalyResult{
