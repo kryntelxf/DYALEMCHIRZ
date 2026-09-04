@@ -23,7 +23,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// Engine is the AI engine for DYALEMCHIRZ
 type Engine struct {
 	mu          sync.RWMutex
 	detectors   []AnomalyDetector
@@ -33,31 +32,26 @@ type Engine struct {
 	running     bool
 }
 
-// AnomalyDetector defines the interface for anomaly detection
 type AnomalyDetector interface {
 	Detect(data interface{}) (*AnomalyResult, error)
 	Name() string
 }
 
-// EventCorrelator defines the interface for event correlation
 type EventCorrelator interface {
 	Correlate(events []interface{}) (*CorrelationResult, error)
 	Name() string
 }
 
-// RiskScorer defines the interface for risk scoring
 type RiskScorer interface {
 	Score(asset interface{}) (*RiskScore, error)
 	Name() string
 }
 
-// Predictor defines the interface for prediction
 type Predictor interface {
 	Predict(data interface{}) (*PredictionResult, error)
 	Name() string
 }
 
-// AnomalyResult represents the result of anomaly detection
 type AnomalyResult struct {
 	Detected    bool      `json:"detected"`
 	Score       float64   `json:"score"`
@@ -66,7 +60,6 @@ type AnomalyResult struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-// CorrelationResult represents the result of event correlation
 type CorrelationResult struct {
 	IncidentID string        `json:"incidentId"`
 	Events     []interface{} `json:"events"`
@@ -74,7 +67,6 @@ type CorrelationResult struct {
 	Confidence float64       `json:"confidence"`
 }
 
-// RiskScore represents the risk score of an asset
 type RiskScore struct {
 	AssetID   string             `json:"assetId"`
 	Score     float64            `json:"score"`
@@ -82,14 +74,12 @@ type RiskScore struct {
 	Timestamp time.Time          `json:"timestamp"`
 }
 
-// PredictionResult represents the result of prediction
 type PredictionResult struct {
 	PredictedState  string   `json:"predictedState"`
 	Confidence      float64  `json:"confidence"`
 	Recommendations []string `json:"recommendations"`
 }
 
-// NewEngine creates a new AI engine
 func NewEngine() *Engine {
 	return &Engine{
 		detectors:   make([]AnomalyDetector, 0),
@@ -100,7 +90,6 @@ func NewEngine() *Engine {
 	}
 }
 
-// RegisterDetector registers an anomaly detector
 func (e *Engine) RegisterDetector(detector AnomalyDetector) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -108,7 +97,6 @@ func (e *Engine) RegisterDetector(detector AnomalyDetector) {
 	klog.Infof("Registered anomaly detector: %s", detector.Name())
 }
 
-// RegisterCorrelator registers an event correlator
 func (e *Engine) RegisterCorrelator(correlator EventCorrelator) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -116,7 +104,6 @@ func (e *Engine) RegisterCorrelator(correlator EventCorrelator) {
 	klog.Infof("Registered event correlator: %s", correlator.Name())
 }
 
-// RegisterScorer registers a risk scorer
 func (e *Engine) RegisterScorer(scorer RiskScorer) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -124,7 +111,6 @@ func (e *Engine) RegisterScorer(scorer RiskScorer) {
 	klog.Infof("Registered risk scorer: %s", scorer.Name())
 }
 
-// RegisterPredictor registers a predictor
 func (e *Engine) RegisterPredictor(predictor Predictor) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -132,7 +118,6 @@ func (e *Engine) RegisterPredictor(predictor Predictor) {
 	klog.Infof("Registered predictor: %s", predictor.Name())
 }
 
-// Start starts the AI engine
 func (e *Engine) Start() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -143,7 +128,6 @@ func (e *Engine) Start() {
 	klog.Info("AI Engine started")
 }
 
-// Stop stops the AI engine
 func (e *Engine) Stop() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -154,18 +138,15 @@ func (e *Engine) Stop() {
 	klog.Info("AI Engine stopped")
 }
 
-// IsRunning returns whether the engine is running
 func (e *Engine) IsRunning() bool {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.running
 }
 
-// DetectAnomalies runs anomaly detection on the given data
 func (e *Engine) DetectAnomalies(data interface{}) []*AnomalyResult {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-
 	results := make([]*AnomalyResult, 0)
 	for _, detector := range e.detectors {
 		result, err := detector.Detect(data)
@@ -180,11 +161,9 @@ func (e *Engine) DetectAnomalies(data interface{}) []*AnomalyResult {
 	return results
 }
 
-// CorrelateEvents runs event correlation
 func (e *Engine) CorrelateEvents(events []interface{}) []*CorrelationResult {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-
 	results := make([]*CorrelationResult, 0)
 	for _, correlator := range e.correlators {
 		result, err := correlator.Correlate(events)
@@ -199,11 +178,9 @@ func (e *Engine) CorrelateEvents(events []interface{}) []*CorrelationResult {
 	return results
 }
 
-// ScoreRisk calculates risk scores
 func (e *Engine) ScoreRisk(asset interface{}) []*RiskScore {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-
 	results := make([]*RiskScore, 0)
 	for _, scorer := range e.scorers {
 		result, err := scorer.Score(asset)
@@ -218,11 +195,9 @@ func (e *Engine) ScoreRisk(asset interface{}) []*RiskScore {
 	return results
 }
 
-// Predict runs prediction
 func (e *Engine) Predict(data interface{}) []*PredictionResult {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-
 	results := make([]*PredictionResult, 0)
 	for _, predictor := range e.predictors {
 		result, err := predictor.Predict(data)
