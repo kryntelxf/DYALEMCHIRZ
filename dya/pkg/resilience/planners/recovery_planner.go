@@ -21,15 +21,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/resilience"
 )
 
-// RecoveryPlanner plans recovery
 type RecoveryPlanner struct{}
 
-// Name returns the name of the planner
 func (p *RecoveryPlanner) Name() string {
 	return "recovery-planner"
 }
 
-// Plan plans recovery for a failure
 func (p *RecoveryPlanner) Plan(asset interface{}, failure *resilience.Failure) (*resilience.RecoveryPlan, error) {
 	klog.V(4).Info("RecoveryPlanner running")
 	return &resilience.RecoveryPlan{
