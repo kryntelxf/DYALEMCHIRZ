@@ -23,15 +23,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai"
 )
 
-// HealthScorer calculates health scores
 type HealthScorer struct{}
 
-// Name returns the name of the scorer
 func (s *HealthScorer) Name() string {
 	return "health-scorer"
 }
 
-// Score calculates health score for an asset
 func (s *HealthScorer) Score(asset interface{}) (*ai.RiskScore, error) {
 	klog.V(4).Info("HealthScorer running")
 	return &ai.RiskScore{
