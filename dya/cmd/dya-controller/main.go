@@ -36,7 +36,6 @@ import (
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/resilience"
 	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
-	"k8s.io/kubernetes/dya/pkg/resilience/detectors"
 	"k8s.io/kubernetes/dya/pkg/resilience/planners"
 )
 
@@ -115,7 +114,6 @@ func main() {
 	// Register Resilience components
 	klog.Info("Registering Resilience components...")
 	resilienceEngine.RegisterHealthChecker(&checkers.HealthChecker{})
-	resilienceEngine.RegisterFailureDetector(&detectors.FailureDetector{})
 	resilienceEngine.RegisterRecoveryPlanner(&planners.RecoveryPlanner{})
 
 	// Start Resilience Engine
