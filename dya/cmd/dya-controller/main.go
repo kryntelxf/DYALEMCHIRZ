@@ -34,9 +34,17 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
+	"k8s.io/kubernetes/dya/pkg/digitaltwin"
+	"k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
+	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
 	"k8s.io/kubernetes/dya/pkg/resilience"
 	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
 	"k8s.io/kubernetes/dya/pkg/resilience/planners"
+	"k8s.io/kubernetes/dya/pkg/security"
+	"k8s.io/kubernetes/dya/pkg/security/auditors"
+	"k8s.io/kubernetes/dya/pkg/security/detectors"
+	"k8s.io/kubernetes/dya/pkg/security/enforcers"
+	"k8s.io/kubernetes/dya/pkg/security/verifiers"
 )
 
 var (
@@ -60,7 +68,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 6: Resilience Engine                                ║")
+	fmt.Println("║   Phase 8: Security Intelligence                            ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -123,7 +131,43 @@ func main() {
 	klog.Info("Resilience Engine started successfully")
 
 	// ============================================
-	// 3. CREATE ASSET GRAPH CONTROLLER
+	// 3. CREATE DIGITAL TWIN ENGINE
+	// ============================================
+	klog.Info("Creating Digital Twin Engine...")
+	digitalTwinEngine := digitaltwin.NewEngine()
+
+	// Register Digital Twin components
+	klog.Info("Registering Digital Twin components...")
+	digitalTwinEngine.RegisterSimulator(&simulators.FailureSimulator{})
+	digitalTwinEngine.RegisterAnalyzer(&analyzers.ImpactAnalyzer{})
+
+	// Start Digital Twin Engine
+	klog.Info("Starting Digital Twin Engine...")
+	digitalTwinEngine.Start()
+	defer digitalTwinEngine.Stop()
+	klog.Info("Digital Twin Engine started successfully")
+
+	// ============================================
+	// 4. CREATE SECURITY ENGINE
+	// ============================================
+	klog.Info("Creating Security Engine...")
+	securityEngine := security.NewEngine()
+
+	// Register Security components
+	klog.Info("Registering Security components...")
+	securityEngine.RegisterVerifier(&verifiers.IdentityVerifier{})
+	securityEngine.RegisterEnforcer(&enforcers.PolicyEnforcer{})
+	securityEngine.RegisterAuditor(&auditors.AuditLogger{})
+	securityEngine.RegisterDetector(&detectors.AnomalyDetector{})
+
+	// Start Security Engine
+	klog.Info("Starting Security Engine...")
+	securityEngine.Start()
+	defer securityEngine.Stop()
+	klog.Info("Security Engine started successfully")
+
+	// ============================================
+	// 5. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -143,7 +187,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 4. ALL COMPONENTS STARTED
+	// 6. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -152,6 +196,8 @@ func main() {
 	klog.Info("║  Components Running:                                         ║")
 	klog.Info("║  ✅ AI Engine (anomaly detection, risk scoring, prediction)   ║")
 	klog.Info("║  ✅ Resilience Engine (health, failure, recovery)             ║")
+	klog.Info("║  ✅ Digital Twin Engine (simulation, impact analysis)         ║")
+	klog.Info("║  ✅ Security Engine (identity, policy, audit, anomaly)        ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
