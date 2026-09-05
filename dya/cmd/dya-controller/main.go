@@ -30,7 +30,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"k8s.io/kubernetes/dya/pkg/ai"
-	"k8s.io/kubernetes/dya/pkg/ai/detectors"
+	aidetectors "k8s.io/kubernetes/dya/pkg/ai/detectors"
 	"k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
@@ -42,7 +42,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/resilience/planners"
 	"k8s.io/kubernetes/dya/pkg/security"
 	"k8s.io/kubernetes/dya/pkg/security/auditors"
-	"k8s.io/kubernetes/dya/pkg/security/detectors"
+	securitydetectors "k8s.io/kubernetes/dya/pkg/security/detectors"
 	"k8s.io/kubernetes/dya/pkg/security/enforcers"
 	"k8s.io/kubernetes/dya/pkg/security/verifiers"
 )
@@ -100,8 +100,8 @@ func main() {
 
 	// Register AI components
 	klog.Info("Registering AI components...")
-	aiEngine.RegisterDetector(&detectors.HealthDetector{})
-	aiEngine.RegisterDetector(&detectors.AnomalyDetector{})
+	aiEngine.RegisterDetector(&aidetectors.HealthDetector{})
+	aiEngine.RegisterDetector(&aidetectors.AnomalyDetector{})
 	aiEngine.RegisterScorer(&scorers.RiskScorer{})
 	aiEngine.RegisterScorer(&scorers.HealthScorer{})
 	aiEngine.RegisterPredictor(&predictors.FailurePredictor{})
@@ -158,7 +158,7 @@ func main() {
 	securityEngine.RegisterVerifier(&verifiers.IdentityVerifier{})
 	securityEngine.RegisterEnforcer(&enforcers.PolicyEnforcer{})
 	securityEngine.RegisterAuditor(&auditors.AuditLogger{})
-	securityEngine.RegisterDetector(&detectors.AnomalyDetector{})
+	securityEngine.RegisterDetector(&securitydetectors.AnomalyDetector{})
 
 	// Start Security Engine
 	klog.Info("Starting Security Engine...")
