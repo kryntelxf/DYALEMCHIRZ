@@ -45,11 +45,11 @@ type Policy struct {
 }
 
 type Rule struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Condition   string   `json:"condition"`
-	Action      string   `json:"action"`
-	Parameters  map[string]string `json:"parameters"`
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	Condition  string            `json:"condition"`
+	Action     string            `json:"action"`
+	Parameters map[string]string `json:"parameters"`
 }
 
 type Evaluator interface {
@@ -68,18 +68,18 @@ type Auditor interface {
 }
 
 type EvaluationResult struct {
-	PolicyID    string    `json:"policyId"`
-	Compliant   bool      `json:"compliant"`
-	Message     string    `json:"message"`
-	Timestamp   time.Time `json:"timestamp"`
+	PolicyID  string    `json:"policyId"`
+	Compliant bool      `json:"compliant"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type EnforcementResult struct {
-	PolicyID    string    `json:"policyId"`
-	Action      string    `json:"action"`
-	Success     bool      `json:"success"`
-	Message     string    `json:"message"`
-	Timestamp   time.Time `json:"timestamp"`
+	PolicyID  string    `json:"policyId"`
+	Action    string    `json:"action"`
+	Success   bool      `json:"success"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 func NewEngine() *Engine {
