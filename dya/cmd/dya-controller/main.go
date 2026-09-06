@@ -37,6 +37,11 @@ import (
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
+	"k8s.io/kubernetes/dya/pkg/edge"
+	"k8s.io/kubernetes/dya/pkg/edge/buffers"
+	"k8s.io/kubernetes/dya/pkg/edge/enforcers"
+	"k8s.io/kubernetes/dya/pkg/edge/handlers"
+	"k8s.io/kubernetes/dya/pkg/edge/syncers"
 	"k8s.io/kubernetes/dya/pkg/resilience"
 	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
 	"k8s.io/kubernetes/dya/pkg/resilience/planners"
@@ -68,7 +73,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 8: Security Intelligence                            ║")
+	fmt.Println("║   Phase 9: Edge Fabric                                      ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -167,7 +172,26 @@ func main() {
 	klog.Info("Security Engine started successfully")
 
 	// ============================================
-	// 5. CREATE ASSET GRAPH CONTROLLER
+	// 5. CREATE EDGE ENGINE
+	// ============================================
+	klog.Info("Creating Edge Engine...")
+	edgeEngine := edge.NewEngine()
+
+	// Register Edge components
+	klog.Info("Registering Edge components...")
+	edgeEngine.RegisterHandler(&handlers.LocalHandler{})
+	edgeEngine.RegisterSyncer(&syncers.Syncer{})
+	edgeEngine.RegisterEnforcer(&enforcers.LocalEnforcer{})
+	edgeEngine.RegisterBuffer(buffers.NewBuffer())
+
+	// Start Edge Engine
+	klog.Info("Starting Edge Engine...")
+	edgeEngine.Start()
+	defer edgeEngine.Stop()
+	klog.Info("Edge Engine started successfully")
+
+	// ============================================
+	// 6. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -187,7 +211,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 6. ALL COMPONENTS STARTED
+	// 7. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -198,6 +222,7 @@ func main() {
 	klog.Info("║  ✅ Resilience Engine (health, failure, recovery)             ║")
 	klog.Info("║  ✅ Digital Twin Engine (simulation, impact analysis)         ║")
 	klog.Info("║  ✅ Security Engine (identity, policy, audit, anomaly)        ║")
+	klog.Info("║  ✅ Edge Engine (local operation, sync, buffer)               ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
