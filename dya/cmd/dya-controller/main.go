@@ -45,7 +45,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/recovery"
 	"k8s.io/kubernetes/dya/pkg/recovery/executors"
 	"k8s.io/kubernetes/dya/pkg/recovery/notifiers"
-	"k8s.io/kubernetes/dya/pkg/recovery/verifiers"
+	recoveryverifiers "k8s.io/kubernetes/dya/pkg/recovery/verifiers"
 	"k8s.io/kubernetes/dya/pkg/resilience"
 	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
 	"k8s.io/kubernetes/dya/pkg/resilience/planners"
@@ -53,7 +53,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/security/auditors"
 	securitydetectors "k8s.io/kubernetes/dya/pkg/security/detectors"
 	securityenforcers "k8s.io/kubernetes/dya/pkg/security/enforcers"
-	"k8s.io/kubernetes/dya/pkg/security/verifiers"
+	securityverifiers "k8s.io/kubernetes/dya/pkg/security/verifiers"
 )
 
 var (
@@ -157,7 +157,7 @@ func main() {
 	securityEngine := security.NewEngine()
 
 	klog.Info("Registering Security components...")
-	securityEngine.RegisterVerifier(&verifiers.IdentityVerifier{})
+	securityEngine.RegisterVerifier(&securityverifiers.IdentityVerifier{})
 	securityEngine.RegisterEnforcer(&securityenforcers.PolicyEnforcer{})
 	securityEngine.RegisterAuditor(&auditors.AuditLogger{})
 	securityEngine.RegisterDetector(&securitydetectors.AnomalyDetector{})
@@ -192,7 +192,7 @@ func main() {
 
 	klog.Info("Registering Recovery components...")
 	recoveryOrchestrator.RegisterExecutor(&executors.BasicExecutor{})
-	recoveryOrchestrator.RegisterVerifier(&verifiers.BasicVerifier{})
+	recoveryOrchestrator.RegisterVerifier(&recoveryverifiers.BasicVerifier{})
 	recoveryOrchestrator.RegisterNotifier(&notifiers.BasicNotifier{})
 
 	klog.Info("Starting Recovery Orchestrator...")
