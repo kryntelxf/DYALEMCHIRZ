@@ -23,15 +23,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/recovery"
 )
 
-// BasicVerifier implements the Verifier interface
 type BasicVerifier struct{}
 
-// Name returns the name of the verifier
 func (v *BasicVerifier) Name() string {
 	return "basic-verifier"
 }
 
-// Verify checks if an asset is healthy
 func (v *BasicVerifier) Verify(assetID string) (*recovery.VerificationResult, error) {
 	klog.V(4).Infof("Verifying asset: %s", assetID)
 	return &recovery.VerificationResult{
