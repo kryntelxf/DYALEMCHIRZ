@@ -43,9 +43,9 @@ import (
 	"k8s.io/kubernetes/dya/pkg/edge/handlers"
 	"k8s.io/kubernetes/dya/pkg/edge/syncers"
 	"k8s.io/kubernetes/dya/pkg/policy"
-	"k8s.io/kubernetes/dya/pkg/policy/auditors"
-	"k8s.io/kubernetes/dya/pkg/policy/enforcers"
-	"k8s.io/kubernetes/dya/pkg/policy/evaluators"
+	policyauditors "k8s.io/kubernetes/dya/pkg/policy/auditors"
+	policyenforcers "k8s.io/kubernetes/dya/pkg/policy/enforcers"
+	policyevaluators "k8s.io/kubernetes/dya/pkg/policy/evaluators"
 	"k8s.io/kubernetes/dya/pkg/recovery"
 	"k8s.io/kubernetes/dya/pkg/recovery/executors"
 	"k8s.io/kubernetes/dya/pkg/recovery/notifiers"
@@ -54,7 +54,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
 	"k8s.io/kubernetes/dya/pkg/resilience/planners"
 	"k8s.io/kubernetes/dya/pkg/security"
-	"k8s.io/kubernetes/dya/pkg/security/auditors"
+	securityauditors "k8s.io/kubernetes/dya/pkg/security/auditors"
 	securitydetectors "k8s.io/kubernetes/dya/pkg/security/detectors"
 	securityenforcers "k8s.io/kubernetes/dya/pkg/security/enforcers"
 	securityverifiers "k8s.io/kubernetes/dya/pkg/security/verifiers"
@@ -161,7 +161,7 @@ func main() {
 	klog.Info("Registering Security components...")
 	securityEngine.RegisterVerifier(&securityverifiers.IdentityVerifier{})
 	securityEngine.RegisterEnforcer(&securityenforcers.PolicyEnforcer{})
-	securityEngine.RegisterAuditor(&auditors.AuditLogger{})
+	securityEngine.RegisterAuditor(&securityauditors.AuditLogger{})
 	securityEngine.RegisterDetector(&securitydetectors.AnomalyDetector{})
 
 	klog.Info("Starting Security Engine...")
@@ -209,9 +209,9 @@ func main() {
 	policyEngine := policy.NewEngine()
 
 	klog.Info("Registering Policy components...")
-	policyEngine.RegisterEvaluator(&evaluators.BasicEvaluator{})
-	policyEngine.RegisterEnforcer(&enforcers.BasicEnforcer{})
-	policyEngine.RegisterAuditor(&auditors.BasicAuditor{})
+	policyEngine.RegisterEvaluator(&policyevaluators.BasicEvaluator{})
+	policyEngine.RegisterEnforcer(&policyenforcers.BasicEnforcer{})
+	policyEngine.RegisterAuditor(&policyauditors.BasicAuditor{})
 
 	klog.Info("Starting Policy Engine...")
 	policyEngine.Start()
