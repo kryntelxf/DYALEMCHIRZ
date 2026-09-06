@@ -84,13 +84,11 @@ func main() {
 
 	klog.Info("DYALEMCHIRZ controller starting...")
 
-	// Get Kubernetes config
 	cfg, err := getConfig()
 	if err != nil {
 		klog.Fatalf("Failed to get Kubernetes config: %v", err)
 	}
 
-	// Setup signal handling for graceful shutdown
 	stopCh := make(chan struct{})
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
@@ -101,108 +99,70 @@ func main() {
 		close(stopCh)
 	}()
 
-	// ============================================
-	// 1. CREATE AI ENGINE
-	// ============================================
+	// 1. AI ENGINE
 	klog.Info("Creating AI Engine...")
 	aiEngine := ai.NewEngine()
-
-	klog.Info("Registering AI components...")
 	aiEngine.RegisterDetector(&aidetectors.HealthDetector{})
 	aiEngine.RegisterDetector(&aidetectors.AnomalyDetector{})
 	aiEngine.RegisterScorer(&scorers.RiskScorer{})
 	aiEngine.RegisterScorer(&scorers.HealthScorer{})
 	aiEngine.RegisterPredictor(&predictors.FailurePredictor{})
 	aiEngine.RegisterPredictor(&predictors.ResourcePredictor{})
-
-	klog.Info("Starting AI Engine...")
 	aiEngine.Start()
 	defer aiEngine.Stop()
-	klog.Info("AI Engine started successfully")
+	klog.Info("AI Engine started")
 
-	// ============================================
-	// 2. CREATE RESILIENCE ENGINE
-	// ============================================
+	// 2. RESILIENCE ENGINE
 	klog.Info("Creating Resilience Engine...")
 	resilienceEngine := resilience.NewEngine()
-
-	klog.Info("Registering Resilience components...")
 	resilienceEngine.RegisterHealthChecker(&checkers.HealthChecker{})
 	resilienceEngine.RegisterRecoveryPlanner(&planners.RecoveryPlanner{})
-
-	klog.Info("Starting Resilience Engine...")
 	resilienceEngine.Start()
 	defer resilienceEngine.Stop()
-	klog.Info("Resilience Engine started successfully")
+	klog.Info("Resilience Engine started")
 
-	// ============================================
-	// 3. CREATE DIGITAL TWIN ENGINE
-	// ============================================
+	// 3. DIGITAL TWIN ENGINE
 	klog.Info("Creating Digital Twin Engine...")
 	digitalTwinEngine := digitaltwin.NewEngine()
-
-	klog.Info("Registering Digital Twin components...")
 	digitalTwinEngine.RegisterSimulator(&simulators.FailureSimulator{})
 	digitalTwinEngine.RegisterAnalyzer(&analyzers.ImpactAnalyzer{})
-
-	klog.Info("Starting Digital Twin Engine...")
 	digitalTwinEngine.Start()
 	defer digitalTwinEngine.Stop()
-	klog.Info("Digital Twin Engine started successfully")
+	klog.Info("Digital Twin Engine started")
 
-	// ============================================
-	// 4. CREATE SECURITY ENGINE
-	// ============================================
+	// 4. SECURITY ENGINE
 	klog.Info("Creating Security Engine...")
 	securityEngine := security.NewEngine()
-
-	klog.Info("Registering Security components...")
 	securityEngine.RegisterVerifier(&securityverifiers.IdentityVerifier{})
 	securityEngine.RegisterEnforcer(&securityenforcers.PolicyEnforcer{})
 	securityEngine.RegisterAuditor(&auditors.AuditLogger{})
 	securityEngine.RegisterDetector(&securitydetectors.AnomalyDetector{})
-
-	klog.Info("Starting Security Engine...")
 	securityEngine.Start()
 	defer securityEngine.Stop()
-	klog.Info("Security Engine started successfully")
+	klog.Info("Security Engine started")
 
-	// ============================================
-	// 5. CREATE EDGE ENGINE
-	// ============================================
+	// 5. EDGE ENGINE
 	klog.Info("Creating Edge Engine...")
 	edgeEngine := edge.NewEngine()
-
-	klog.Info("Registering Edge components...")
 	edgeEngine.RegisterHandler(&handlers.LocalHandler{})
 	edgeEngine.RegisterSyncer(&syncers.Syncer{})
 	edgeEngine.RegisterEnforcer(&edgeenforcers.LocalEnforcer{})
 	edgeEngine.RegisterBuffer(buffers.NewBuffer())
-
-	klog.Info("Starting Edge Engine...")
 	edgeEngine.Start()
 	defer edgeEngine.Stop()
-	klog.Info("Edge Engine started successfully")
+	klog.Info("Edge Engine started")
 
-	// ============================================
-	// 6. CREATE RECOVERY ORCHESTRATOR
-	// ============================================
+	// 6. RECOVERY ORCHESTRATOR
 	klog.Info("Creating Recovery Orchestrator...")
 	recoveryOrchestrator := recovery.NewOrchestrator()
-
-	klog.Info("Registering Recovery components...")
 	recoveryOrchestrator.RegisterExecutor(&executors.BasicExecutor{})
 	recoveryOrchestrator.RegisterVerifier(&recoveryverifiers.BasicVerifier{})
 	recoveryOrchestrator.RegisterNotifier(&notifiers.BasicNotifier{})
-
-	klog.Info("Starting Recovery Orchestrator...")
 	recoveryOrchestrator.Start()
 	defer recoveryOrchestrator.Stop()
-	klog.Info("Recovery Orchestrator started successfully")
+	klog.Info("Recovery Orchestrator started")
 
-	// ============================================
-	// 7. CREATE ASSET GRAPH CONTROLLER
-	// ============================================
+	// 7. ASSET GRAPH CONTROLLER
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
 	if err != nil {
@@ -219,35 +179,30 @@ func main() {
 		}
 	}()
 
-	// ============================================
 	// 8. ALL COMPONENTS STARTED
-	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
 	klog.Info("")
 	klog.Info("╔══════════════════════════════════════════════════════════════╗")
 	klog.Info("║  Components Running:                                         ║")
-	klog.Info("║  ✅ AI Engine (anomaly detection, risk scoring, prediction)   ║")
-	klog.Info("║  ✅ Resilience Engine (health, failure, recovery)             ║")
-	klog.Info("║  ✅ Digital Twin Engine (simulation, impact analysis)         ║")
-	klog.Info("║  ✅ Security Engine (identity, policy, audit, anomaly)        ║")
-	klog.Info("║  ✅ Edge Engine (local operation, sync, buffer)               ║")
-	klog.Info("║  ✅ Recovery Orchestrator (automated recovery)                ║")
-	klog.Info("║  ✅ Asset Graph Controller                                   ║")
+	klog.Info("║  ✅ AI Engine                                               ║")
+	klog.Info("║  ✅ Resilience Engine                                       ║")
+	klog.Info("║  ✅ Digital Twin Engine                                     ║")
+	klog.Info("║  ✅ Security Engine                                         ║")
+	klog.Info("║  ✅ Edge Engine                                             ║")
+	klog.Info("║  ✅ Recovery Orchestrator                                   ║")
+	klog.Info("║  ✅ Asset Graph Controller                                  ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
 	klog.Info("Press Ctrl+C to stop")
 
-	// Wait for shutdown signal
 	<-stopCh
 	klog.Info("Shutting down gracefully...")
 	cancel()
-
 	time.Sleep(2 * time.Second)
 	klog.Info("Shutdown complete")
 }
 
-// getConfig returns the rest.Config for the Kubernetes API server
 func getConfig() (*rest.Config, error) {
 	if kubeconfig != "" {
 		return clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
