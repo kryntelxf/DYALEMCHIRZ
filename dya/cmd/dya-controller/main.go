@@ -42,6 +42,10 @@ import (
 	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
 	"k8s.io/kubernetes/dya/pkg/edge/handlers"
 	"k8s.io/kubernetes/dya/pkg/edge/syncers"
+	"k8s.io/kubernetes/dya/pkg/knowledge"
+	"k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
+	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
+	"k8s.io/kubernetes/dya/pkg/knowledge/queriers"
 	"k8s.io/kubernetes/dya/pkg/policy"
 	policyauditors "k8s.io/kubernetes/dya/pkg/policy/auditors"
 	policyenforcers "k8s.io/kubernetes/dya/pkg/policy/enforcers"
@@ -81,7 +85,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 11: Policy Engine                                   ║")
+	fmt.Println("║   Phase 12: Infrastructure Knowledge Graph                  ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -219,7 +223,23 @@ func main() {
 	klog.Info("Policy Engine started successfully")
 
 	// ============================================
-	// 8. CREATE ASSET GRAPH CONTROLLER
+	// 8. CREATE KNOWLEDGE ENGINE
+	// ============================================
+	klog.Info("Creating Knowledge Engine...")
+	knowledgeEngine := knowledge.NewEngine()
+
+	klog.Info("Registering Knowledge components...")
+	knowledgeEngine.RegisterExtractor(&extractors.BasicExtractor{})
+	knowledgeEngine.RegisterAnalyzer(&analyzers.BasicAnalyzer{})
+	knowledgeEngine.RegisterQuerier(&queriers.BasicQuerier{})
+
+	klog.Info("Starting Knowledge Engine...")
+	knowledgeEngine.Start()
+	defer knowledgeEngine.Stop()
+	klog.Info("Knowledge Engine started successfully")
+
+	// ============================================
+	// 9. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -238,7 +258,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 9. ALL COMPONENTS STARTED
+	// 10. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -252,6 +272,7 @@ func main() {
 	klog.Info("║  ✅ Edge Engine (local operation, sync, buffer)               ║")
 	klog.Info("║  ✅ Recovery Orchestrator (automated recovery)                ║")
 	klog.Info("║  ✅ Policy Engine (policy evaluation, enforcement, audit)     ║")
+	klog.Info("║  ✅ Knowledge Engine (knowledge extraction, analysis, query)  ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
