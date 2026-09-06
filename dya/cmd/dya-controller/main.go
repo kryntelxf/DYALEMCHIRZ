@@ -39,7 +39,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
 	"k8s.io/kubernetes/dya/pkg/edge"
 	"k8s.io/kubernetes/dya/pkg/edge/buffers"
-	"k8s.io/kubernetes/dya/pkg/edge/enforcers"
+	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
 	"k8s.io/kubernetes/dya/pkg/edge/handlers"
 	"k8s.io/kubernetes/dya/pkg/edge/syncers"
 	"k8s.io/kubernetes/dya/pkg/resilience"
@@ -48,7 +48,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/security"
 	"k8s.io/kubernetes/dya/pkg/security/auditors"
 	securitydetectors "k8s.io/kubernetes/dya/pkg/security/detectors"
-	"k8s.io/kubernetes/dya/pkg/security/enforcers"
+	securityenforcers "k8s.io/kubernetes/dya/pkg/security/enforcers"
 	"k8s.io/kubernetes/dya/pkg/security/verifiers"
 )
 
@@ -161,7 +161,7 @@ func main() {
 	// Register Security components
 	klog.Info("Registering Security components...")
 	securityEngine.RegisterVerifier(&verifiers.IdentityVerifier{})
-	securityEngine.RegisterEnforcer(&enforcers.PolicyEnforcer{})
+	securityEngine.RegisterEnforcer(&securityenforcers.PolicyEnforcer{})
 	securityEngine.RegisterAuditor(&auditors.AuditLogger{})
 	securityEngine.RegisterDetector(&securitydetectors.AnomalyDetector{})
 
@@ -181,7 +181,7 @@ func main() {
 	klog.Info("Registering Edge components...")
 	edgeEngine.RegisterHandler(&handlers.LocalHandler{})
 	edgeEngine.RegisterSyncer(&syncers.Syncer{})
-	edgeEngine.RegisterEnforcer(&enforcers.LocalEnforcer{})
+	edgeEngine.RegisterEnforcer(&edgeenforcers.LocalEnforcer{})
 	edgeEngine.RegisterBuffer(buffers.NewBuffer())
 
 	// Start Edge Engine
