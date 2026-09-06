@@ -42,6 +42,10 @@ import (
 	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
 	"k8s.io/kubernetes/dya/pkg/edge/handlers"
 	"k8s.io/kubernetes/dya/pkg/edge/syncers"
+	"k8s.io/kubernetes/dya/pkg/policy"
+	"k8s.io/kubernetes/dya/pkg/policy/auditors"
+	"k8s.io/kubernetes/dya/pkg/policy/enforcers"
+	"k8s.io/kubernetes/dya/pkg/policy/evaluators"
 	"k8s.io/kubernetes/dya/pkg/recovery"
 	"k8s.io/kubernetes/dya/pkg/recovery/executors"
 	"k8s.io/kubernetes/dya/pkg/recovery/notifiers"
@@ -77,7 +81,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 10: Recovery Orchestrator                           ║")
+	fmt.Println("║   Phase 11: Policy Engine                                   ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -99,70 +103,124 @@ func main() {
 		close(stopCh)
 	}()
 
-	// 1. AI ENGINE
+	// ============================================
+	// 1. CREATE AI ENGINE
+	// ============================================
 	klog.Info("Creating AI Engine...")
 	aiEngine := ai.NewEngine()
+
+	klog.Info("Registering AI components...")
 	aiEngine.RegisterDetector(&aidetectors.HealthDetector{})
 	aiEngine.RegisterDetector(&aidetectors.AnomalyDetector{})
 	aiEngine.RegisterScorer(&scorers.RiskScorer{})
 	aiEngine.RegisterScorer(&scorers.HealthScorer{})
 	aiEngine.RegisterPredictor(&predictors.FailurePredictor{})
 	aiEngine.RegisterPredictor(&predictors.ResourcePredictor{})
+
+	klog.Info("Starting AI Engine...")
 	aiEngine.Start()
 	defer aiEngine.Stop()
-	klog.Info("AI Engine started")
+	klog.Info("AI Engine started successfully")
 
-	// 2. RESILIENCE ENGINE
+	// ============================================
+	// 2. CREATE RESILIENCE ENGINE
+	// ============================================
 	klog.Info("Creating Resilience Engine...")
 	resilienceEngine := resilience.NewEngine()
+
+	klog.Info("Registering Resilience components...")
 	resilienceEngine.RegisterHealthChecker(&checkers.HealthChecker{})
 	resilienceEngine.RegisterRecoveryPlanner(&planners.RecoveryPlanner{})
+
+	klog.Info("Starting Resilience Engine...")
 	resilienceEngine.Start()
 	defer resilienceEngine.Stop()
-	klog.Info("Resilience Engine started")
+	klog.Info("Resilience Engine started successfully")
 
-	// 3. DIGITAL TWIN ENGINE
+	// ============================================
+	// 3. CREATE DIGITAL TWIN ENGINE
+	// ============================================
 	klog.Info("Creating Digital Twin Engine...")
 	digitalTwinEngine := digitaltwin.NewEngine()
+
+	klog.Info("Registering Digital Twin components...")
 	digitalTwinEngine.RegisterSimulator(&simulators.FailureSimulator{})
 	digitalTwinEngine.RegisterAnalyzer(&analyzers.ImpactAnalyzer{})
+
+	klog.Info("Starting Digital Twin Engine...")
 	digitalTwinEngine.Start()
 	defer digitalTwinEngine.Stop()
-	klog.Info("Digital Twin Engine started")
+	klog.Info("Digital Twin Engine started successfully")
 
-	// 4. SECURITY ENGINE
+	// ============================================
+	// 4. CREATE SECURITY ENGINE
+	// ============================================
 	klog.Info("Creating Security Engine...")
 	securityEngine := security.NewEngine()
+
+	klog.Info("Registering Security components...")
 	securityEngine.RegisterVerifier(&securityverifiers.IdentityVerifier{})
 	securityEngine.RegisterEnforcer(&securityenforcers.PolicyEnforcer{})
 	securityEngine.RegisterAuditor(&auditors.AuditLogger{})
 	securityEngine.RegisterDetector(&securitydetectors.AnomalyDetector{})
+
+	klog.Info("Starting Security Engine...")
 	securityEngine.Start()
 	defer securityEngine.Stop()
-	klog.Info("Security Engine started")
+	klog.Info("Security Engine started successfully")
 
-	// 5. EDGE ENGINE
+	// ============================================
+	// 5. CREATE EDGE ENGINE
+	// ============================================
 	klog.Info("Creating Edge Engine...")
 	edgeEngine := edge.NewEngine()
+
+	klog.Info("Registering Edge components...")
 	edgeEngine.RegisterHandler(&handlers.LocalHandler{})
 	edgeEngine.RegisterSyncer(&syncers.Syncer{})
 	edgeEngine.RegisterEnforcer(&edgeenforcers.LocalEnforcer{})
 	edgeEngine.RegisterBuffer(buffers.NewBuffer())
+
+	klog.Info("Starting Edge Engine...")
 	edgeEngine.Start()
 	defer edgeEngine.Stop()
-	klog.Info("Edge Engine started")
+	klog.Info("Edge Engine started successfully")
 
-	// 6. RECOVERY ORCHESTRATOR
+	// ============================================
+	// 6. CREATE RECOVERY ORCHESTRATOR
+	// ============================================
 	klog.Info("Creating Recovery Orchestrator...")
 	recoveryOrchestrator := recovery.NewOrchestrator()
+
+	klog.Info("Registering Recovery components...")
 	recoveryOrchestrator.RegisterExecutor(&executors.BasicExecutor{})
 	recoveryOrchestrator.RegisterVerifier(&recoveryverifiers.BasicVerifier{})
 	recoveryOrchestrator.RegisterNotifier(&notifiers.BasicNotifier{})
+
+	klog.Info("Starting Recovery Orchestrator...")
 	recoveryOrchestrator.Start()
 	defer recoveryOrchestrator.Stop()
-	klog.Info("Recovery Orchestrator started")
+	klog.Info("Recovery Orchestrator started successfully")
 
-	// 7. ASSET GRAPH CONTROLLER
+	// ============================================
+	// 7. CREATE POLICY ENGINE
+	// ============================================
+	klog.Info("Creating Policy Engine...")
+	policyEngine := policy.NewEngine()
+
+	klog.Info("Registering Policy components...")
+	policyEngine.RegisterEvaluator(&evaluators.BasicEvaluator{})
+	policyEngine.RegisterEnforcer(&enforcers.BasicEnforcer{})
+	policyEngine.RegisterAuditor(&auditors.BasicAuditor{})
+
+	klog.Info("Starting Policy Engine...")
+	policyEngine.Start()
+	defer policyEngine.Stop()
+	klog.Info("Policy Engine started successfully")
+
+	// ============================================
+	// 8. CREATE ASSET GRAPH CONTROLLER
+	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
 	if err != nil {
@@ -179,30 +237,36 @@ func main() {
 		}
 	}()
 
-	// 8. ALL COMPONENTS STARTED
+	// ============================================
+	// 9. ALL COMPONENTS STARTED
+	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
 	klog.Info("")
 	klog.Info("╔══════════════════════════════════════════════════════════════╗")
 	klog.Info("║  Components Running:                                         ║")
-	klog.Info("║  ✅ AI Engine                                               ║")
-	klog.Info("║  ✅ Resilience Engine                                       ║")
-	klog.Info("║  ✅ Digital Twin Engine                                     ║")
-	klog.Info("║  ✅ Security Engine                                         ║")
-	klog.Info("║  ✅ Edge Engine                                             ║")
-	klog.Info("║  ✅ Recovery Orchestrator                                   ║")
-	klog.Info("║  ✅ Asset Graph Controller                                  ║")
+	klog.Info("║  ✅ AI Engine (anomaly detection, risk scoring, prediction)   ║")
+	klog.Info("║  ✅ Resilience Engine (health, failure, recovery)             ║")
+	klog.Info("║  ✅ Digital Twin Engine (simulation, impact analysis)         ║")
+	klog.Info("║  ✅ Security Engine (identity, policy, audit, anomaly)        ║")
+	klog.Info("║  ✅ Edge Engine (local operation, sync, buffer)               ║")
+	klog.Info("║  ✅ Recovery Orchestrator (automated recovery)                ║")
+	klog.Info("║  ✅ Policy Engine (policy evaluation, enforcement, audit)     ║")
+	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
 	klog.Info("Press Ctrl+C to stop")
 
+	// Wait for shutdown signal
 	<-stopCh
 	klog.Info("Shutting down gracefully...")
 	cancel()
+
 	time.Sleep(2 * time.Second)
 	klog.Info("Shutdown complete")
 }
 
+// getConfig returns the rest.Config for the Kubernetes API server
 func getConfig() (*rest.Config, error) {
 	if kubeconfig != "" {
 		return clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
