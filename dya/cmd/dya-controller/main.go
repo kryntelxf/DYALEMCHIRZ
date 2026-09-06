@@ -35,7 +35,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
-	"k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
+	digitaltwinanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
 	"k8s.io/kubernetes/dya/pkg/edge"
 	"k8s.io/kubernetes/dya/pkg/edge/buffers"
@@ -43,7 +43,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/edge/handlers"
 	"k8s.io/kubernetes/dya/pkg/edge/syncers"
 	"k8s.io/kubernetes/dya/pkg/knowledge"
-	"k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
+	knowledgeanalyzers "k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
 	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
 	"k8s.io/kubernetes/dya/pkg/knowledge/queriers"
 	"k8s.io/kubernetes/dya/pkg/policy"
@@ -149,7 +149,7 @@ func main() {
 
 	klog.Info("Registering Digital Twin components...")
 	digitalTwinEngine.RegisterSimulator(&simulators.FailureSimulator{})
-	digitalTwinEngine.RegisterAnalyzer(&analyzers.ImpactAnalyzer{})
+	digitalTwinEngine.RegisterAnalyzer(&digitaltwinanalyzers.ImpactAnalyzer{})
 
 	klog.Info("Starting Digital Twin Engine...")
 	digitalTwinEngine.Start()
@@ -230,7 +230,7 @@ func main() {
 
 	klog.Info("Registering Knowledge components...")
 	knowledgeEngine.RegisterExtractor(&extractors.BasicExtractor{})
-	knowledgeEngine.RegisterAnalyzer(&analyzers.BasicAnalyzer{})
+	knowledgeEngine.RegisterAnalyzer(&knowledgeanalyzers.BasicAnalyzer{})
 	knowledgeEngine.RegisterQuerier(&queriers.BasicQuerier{})
 
 	klog.Info("Starting Knowledge Engine...")
