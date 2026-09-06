@@ -31,7 +31,7 @@ import (
 
 	"k8s.io/kubernetes/dya/pkg/ai"
 	aidetectors "k8s.io/kubernetes/dya/pkg/ai/detectors"
-	"k8s.io/kubernetes/dya/pkg/ai/predictors"
+	aipredictors "k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
@@ -51,9 +51,9 @@ import (
 	policyenforcers "k8s.io/kubernetes/dya/pkg/policy/enforcers"
 	policyevaluators "k8s.io/kubernetes/dya/pkg/policy/evaluators"
 	"k8s.io/kubernetes/dya/pkg/predictive"
-	"k8s.io/kubernetes/dya/pkg/predictive/analyzers"
+	predictiveanalyzers "k8s.io/kubernetes/dya/pkg/predictive/analyzers"
 	"k8s.io/kubernetes/dya/pkg/predictive/forecasters"
-	"k8s.io/kubernetes/dya/pkg/predictive/predictors"
+	predictivepredictors "k8s.io/kubernetes/dya/pkg/predictive/predictors"
 	"k8s.io/kubernetes/dya/pkg/predictive/recommenders"
 	"k8s.io/kubernetes/dya/pkg/recovery"
 	"k8s.io/kubernetes/dya/pkg/recovery/executors"
@@ -123,8 +123,8 @@ func main() {
 	aiEngine.RegisterDetector(&aidetectors.AnomalyDetector{})
 	aiEngine.RegisterScorer(&scorers.RiskScorer{})
 	aiEngine.RegisterScorer(&scorers.HealthScorer{})
-	aiEngine.RegisterPredictor(&predictors.FailurePredictor{})
-	aiEngine.RegisterPredictor(&predictors.ResourcePredictor{})
+	aiEngine.RegisterPredictor(&aipredictors.FailurePredictor{})
+	aiEngine.RegisterPredictor(&aipredictors.ResourcePredictor{})
 
 	klog.Info("Starting AI Engine...")
 	aiEngine.Start()
@@ -250,9 +250,9 @@ func main() {
 	predictiveEngine := predictive.NewEngine()
 
 	klog.Info("Registering Predictive components...")
-	predictiveEngine.RegisterPredictor(&predictors.FailurePredictor{})
+	predictiveEngine.RegisterPredictor(&predictivepredictors.FailurePredictor{})
 	predictiveEngine.RegisterForecaster(&forecasters.CapacityForecaster{})
-	predictiveEngine.RegisterRiskAnalyzer(&analyzers.RiskAnalyzer{})
+	predictiveEngine.RegisterRiskAnalyzer(&predictiveanalyzers.RiskAnalyzer{})
 	predictiveEngine.RegisterRecommender(&recommenders.BasicRecommender{})
 
 	klog.Info("Starting Predictive Engine...")
