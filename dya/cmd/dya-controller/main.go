@@ -35,7 +35,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
-	digitaltwinanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
+	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
 	"k8s.io/kubernetes/dya/pkg/edge"
 	"k8s.io/kubernetes/dya/pkg/edge/buffers"
@@ -50,6 +50,11 @@ import (
 	policyauditors "k8s.io/kubernetes/dya/pkg/policy/auditors"
 	policyenforcers "k8s.io/kubernetes/dya/pkg/policy/enforcers"
 	policyevaluators "k8s.io/kubernetes/dya/pkg/policy/evaluators"
+	"k8s.io/kubernetes/dya/pkg/predictive"
+	"k8s.io/kubernetes/dya/pkg/predictive/analyzers"
+	"k8s.io/kubernetes/dya/pkg/predictive/forecasters"
+	"k8s.io/kubernetes/dya/pkg/predictive/predictors"
+	"k8s.io/kubernetes/dya/pkg/predictive/recommenders"
 	"k8s.io/kubernetes/dya/pkg/recovery"
 	"k8s.io/kubernetes/dya/pkg/recovery/executors"
 	"k8s.io/kubernetes/dya/pkg/recovery/notifiers"
@@ -85,7 +90,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 12: Infrastructure Knowledge Graph                  ║")
+	fmt.Println("║   Phase 13: Predictive Infrastructure Intelligence          ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -149,7 +154,7 @@ func main() {
 
 	klog.Info("Registering Digital Twin components...")
 	digitalTwinEngine.RegisterSimulator(&simulators.FailureSimulator{})
-	digitalTwinEngine.RegisterAnalyzer(&digitaltwinanalyzers.ImpactAnalyzer{})
+	digitalTwinEngine.RegisterAnalyzer(&dtanalyzers.ImpactAnalyzer{})
 
 	klog.Info("Starting Digital Twin Engine...")
 	digitalTwinEngine.Start()
@@ -239,7 +244,24 @@ func main() {
 	klog.Info("Knowledge Engine started successfully")
 
 	// ============================================
-	// 9. CREATE ASSET GRAPH CONTROLLER
+	// 9. CREATE PREDICTIVE ENGINE
+	// ============================================
+	klog.Info("Creating Predictive Engine...")
+	predictiveEngine := predictive.NewEngine()
+
+	klog.Info("Registering Predictive components...")
+	predictiveEngine.RegisterPredictor(&predictors.FailurePredictor{})
+	predictiveEngine.RegisterForecaster(&forecasters.CapacityForecaster{})
+	predictiveEngine.RegisterRiskAnalyzer(&analyzers.RiskAnalyzer{})
+	predictiveEngine.RegisterRecommender(&recommenders.BasicRecommender{})
+
+	klog.Info("Starting Predictive Engine...")
+	predictiveEngine.Start()
+	defer predictiveEngine.Stop()
+	klog.Info("Predictive Engine started successfully")
+
+	// ============================================
+	// 10. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -258,7 +280,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 10. ALL COMPONENTS STARTED
+	// 11. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -273,6 +295,7 @@ func main() {
 	klog.Info("║  ✅ Recovery Orchestrator (automated recovery)                ║")
 	klog.Info("║  ✅ Policy Engine (policy evaluation, enforcement, audit)     ║")
 	klog.Info("║  ✅ Knowledge Engine (knowledge extraction, analysis, query)  ║")
+	klog.Info("║  ✅ Predictive Engine (failure prediction, forecasting)       ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
