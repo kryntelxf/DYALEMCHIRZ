@@ -42,6 +42,9 @@ import (
 	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
 	"k8s.io/kubernetes/dya/pkg/edge/handlers"
 	"k8s.io/kubernetes/dya/pkg/edge/syncers"
+	"k8s.io/kubernetes/dya/pkg/enterprise"
+	"k8s.io/kubernetes/dya/pkg/enterprise/auditors"
+	"k8s.io/kubernetes/dya/pkg/enterprise/handlers"
 	"k8s.io/kubernetes/dya/pkg/knowledge"
 	knowledgeanalyzers "k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
 	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
@@ -94,7 +97,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 14: Large-Scale Simulation                          ║")
+	fmt.Println("║   Phase 15: Enterprise Platform                             ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -281,7 +284,46 @@ func main() {
 	klog.Info("Simulation Engine started successfully")
 
 	// ============================================
-	// 11. CREATE ASSET GRAPH CONTROLLER
+	// 11. CREATE ENTERPRISE ENGINE
+	// ============================================
+	klog.Info("Creating Enterprise Engine...")
+	enterpriseEngine := enterprise.NewEngine()
+
+	klog.Info("Registering Enterprise components...")
+	enterpriseEngine.RegisterAuditor(&auditors.EnterpriseAuditor{})
+	enterpriseEngine.RegisterAPIHandler(&handlers.APIHandler{})
+
+	// Register sample tenant, role, organization
+	enterpriseEngine.RegisterTenant(enterprise.Tenant{
+		ID:          "tenant-1",
+		Name:        "Default Tenant",
+		Description: "Default enterprise tenant",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	})
+
+	enterpriseEngine.RegisterRole(enterprise.Role{
+		ID:          "role-1",
+		Name:        "Admin",
+		Permissions: []string{"read", "write", "delete", "admin"},
+		CreatedAt:   time.Now(),
+	})
+
+	enterpriseEngine.RegisterOrganization(enterprise.Organization{
+		ID:          "org-1",
+		Name:        "Default Organization",
+		TenantID:    "tenant-1",
+		Members:     []string{"admin"},
+		CreatedAt:   time.Now(),
+	})
+
+	klog.Info("Starting Enterprise Engine...")
+	enterpriseEngine.Start()
+	defer enterpriseEngine.Stop()
+	klog.Info("Enterprise Engine started successfully")
+
+	// ============================================
+	// 12. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -300,7 +342,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 12. ALL COMPONENTS STARTED
+	// 13. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -317,6 +359,7 @@ func main() {
 	klog.Info("║  ✅ Knowledge Engine (knowledge extraction, analysis, query)  ║")
 	klog.Info("║  ✅ Predictive Engine (failure prediction, forecasting)       ║")
 	klog.Info("║  ✅ Simulation Engine (large-scale simulation, validation)    ║")
+	klog.Info("║  ✅ Enterprise Engine (multi-tenancy, RBAC, API)             ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
