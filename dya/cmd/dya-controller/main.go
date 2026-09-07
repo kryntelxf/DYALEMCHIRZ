@@ -41,13 +41,13 @@ import (
 	"k8s.io/kubernetes/dya/pkg/edge/buffers"
 	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
 	edgehandlers "k8s.io/kubernetes/dya/pkg/edge/handlers"
-	"k8s.io/kubernetes/dya/pkg/edge/syncers"
+	edgesyncers "k8s.io/kubernetes/dya/pkg/edge/syncers"
 	"k8s.io/kubernetes/dya/pkg/enterprise"
 	"k8s.io/kubernetes/dya/pkg/enterprise/auditors"
 	enterprisehandlers "k8s.io/kubernetes/dya/pkg/enterprise/handlers"
 	"k8s.io/kubernetes/dya/pkg/globaledge"
 	"k8s.io/kubernetes/dya/pkg/globaledge/routers"
-	"k8s.io/kubernetes/dya/pkg/globaledge/syncers"
+	globalsyncers "k8s.io/kubernetes/dya/pkg/globaledge/syncers"
 	"k8s.io/kubernetes/dya/pkg/knowledge"
 	knowledgeanalyzers "k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
 	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
@@ -198,7 +198,7 @@ func main() {
 
 	klog.Info("Registering Edge components...")
 	edgeEngine.RegisterHandler(&edgehandlers.LocalHandler{})
-	edgeEngine.RegisterSyncer(&syncers.Syncer{})
+	edgeEngine.RegisterSyncer(&edgesyncers.Syncer{})
 	edgeEngine.RegisterEnforcer(&edgeenforcers.LocalEnforcer{})
 	edgeEngine.RegisterBuffer(buffers.NewBuffer())
 
@@ -375,9 +375,8 @@ func main() {
 
 	klog.Info("Registering Global Edge components...")
 	globalEdgeEngine.RegisterRouter(&routers.BasicRouter{})
-	globalEdgeEngine.RegisterSyncer(&syncers.BasicSyncer{})
+	globalEdgeEngine.RegisterSyncer(&globalsyncers.BasicSyncer{})
 
-	// Register sample region
 	globalEdgeEngine.RegisterRegion(globaledge.Region{
 		ID:          "region-1",
 		Name:        "US West",
@@ -386,7 +385,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample cluster
 	globalEdgeEngine.RegisterCluster(globaledge.Cluster{
 		ID:          "cluster-1",
 		Name:        "Primary Cluster",
@@ -396,7 +394,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample gateway
 	globalEdgeEngine.RegisterGateway(globaledge.Gateway{
 		ID:          "gateway-1",
 		Name:        "Primary Gateway",
