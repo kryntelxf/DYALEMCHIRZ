@@ -22,50 +22,38 @@ import (
 
 // AssetSpec defines the desired state of Asset
 type AssetSpec struct {
-	// DisplayName is the human-readable name of the asset
+	// DisplayName is the human-readable name
 	DisplayName string `json:"displayName,omitempty"`
 
-	// AssetType is the type of asset (e.g., "Node", "Pod", "Service", "Database")
+	// AssetType is the type (Node, Pod, Service, Deployment)
 	AssetType string `json:"assetType"`
 
-	// Parent is the reference to the parent asset
+	// Parent is the reference to parent asset
 	Parent string `json:"parent,omitempty"`
 
-	// Labels are key-value pairs for categorization
+	// Labels for categorization
 	Labels map[string]string `json:"labels,omitempty"`
 
-	// Properties are additional properties of the asset
+	// Properties of the asset
 	Properties map[string]string `json:"properties,omitempty"`
 
-	// Health represents the current health status
+	// Health status
 	Health HealthStatus `json:"health,omitempty"`
 }
 
-// HealthStatus represents the health of an asset
+// HealthStatus represents asset health
 type HealthStatus struct {
-	// Status is the overall status (Healthy, Degraded, Unhealthy, Unknown)
-	Status string `json:"status,omitempty"`
-
-	// LastUpdated is the timestamp of the last health update
+	Status      string      `json:"status,omitempty"` // Healthy, Degraded, Unhealthy, Unknown
 	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
-
-	// Message provides additional health information
-	Message string `json:"message,omitempty"`
+	Message     string      `json:"message,omitempty"`
 }
 
-// AssetStatus defines the observed state of Asset
+// AssetStatus defines the observed state
 type AssetStatus struct {
-	// ObservedGeneration is the generation observed by the controller
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
-	// Conditions represent the latest available observations
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-
-	// DependencyCount is the number of dependencies
-	DependencyCount int `json:"dependencyCount,omitempty"`
-
-	// LastSync is the timestamp of the last sync
-	LastSync metav1.Time `json:"lastSync,omitempty"`
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
+	DependencyCount    int                `json:"dependencyCount,omitempty"`
+	LastSync           metav1.Time        `json:"lastSync,omitempty"`
 }
 
 // +genclient
