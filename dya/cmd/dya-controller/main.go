@@ -20,6 +20,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -29,75 +31,23 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	"k8s.io/kubernetes/dya/pkg/ai"
-	aidetectors "k8s.io/kubernetes/dya/pkg/ai/detectors"
-	aipredictors "k8s.io/kubernetes/dya/pkg/ai/predictors"
-	"k8s.io/kubernetes/dya/pkg/ai/scorers"
-	"k8s.io/kubernetes/dya/pkg/commercial"
-	"k8s.io/kubernetes/dya/pkg/commercial/licenses"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
-	"k8s.io/kubernetes/dya/pkg/developer"
-	"k8s.io/kubernetes/dya/pkg/digitaltwin"
-	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
-	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
-	"k8s.io/kubernetes/dya/pkg/ecosystem"
-	"k8s.io/kubernetes/dya/pkg/ecosystem/sdks"
-	"k8s.io/kubernetes/dya/pkg/edge"
-	"k8s.io/kubernetes/dya/pkg/edge/buffers"
-	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
-	edgehandlers "k8s.io/kubernetes/dya/pkg/edge/handlers"
-	edgesyncers "k8s.io/kubernetes/dya/pkg/edge/syncers"
-	"k8s.io/kubernetes/dya/pkg/enterprise"
-	"k8s.io/kubernetes/dya/pkg/enterprise/auditors"
-	enterprisehandlers "k8s.io/kubernetes/dya/pkg/enterprise/handlers"
-	"k8s.io/kubernetes/dya/pkg/globaledge"
-	"k8s.io/kubernetes/dya/pkg/globaledge/routers"
-	globalsyncers "k8s.io/kubernetes/dya/pkg/globaledge/syncers"
-	"k8s.io/kubernetes/dya/pkg/globalscale"
-	"k8s.io/kubernetes/dya/pkg/globalscale/regions"
-	"k8s.io/kubernetes/dya/pkg/knowledge"
-	knowledgeanalyzers "k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
-	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
-	"k8s.io/kubernetes/dya/pkg/knowledge/queriers"
-	"k8s.io/kubernetes/dya/pkg/multitenant"
-	mtvalidators "k8s.io/kubernetes/dya/pkg/multitenant/validators"
-	"k8s.io/kubernetes/dya/pkg/policy"
-	policyauditors "k8s.io/kubernetes/dya/pkg/policy/auditors"
-	policyenforcers "k8s.io/kubernetes/dya/pkg/policy/enforcers"
-	policyevaluators "k8s.io/kubernetes/dya/pkg/policy/evaluators"
-	"k8s.io/kubernetes/dya/pkg/predictive"
-	predictiveanalyzers "k8s.io/kubernetes/dya/pkg/predictive/analyzers"
-	"k8s.io/kubernetes/dya/pkg/predictive/forecasters"
-	predictivepredictors "k8s.io/kubernetes/dya/pkg/predictive/predictors"
-	"k8s.io/kubernetes/dya/pkg/predictive/recommenders"
-	"k8s.io/kubernetes/dya/pkg/recovery"
-	"k8s.io/kubernetes/dya/pkg/recovery/executors"
-	"k8s.io/kubernetes/dya/pkg/recovery/notifiers"
-	recoveryverifiers "k8s.io/kubernetes/dya/pkg/recovery/verifiers"
-	"k8s.io/kubernetes/dya/pkg/resilience"
-	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
-	"k8s.io/kubernetes/dya/pkg/resilience/planners"
-	"k8s.io/kubernetes/dya/pkg/security"
-	securityauditors "k8s.io/kubernetes/dya/pkg/security/auditors"
-	securitydetectors "k8s.io/kubernetes/dya/pkg/security/detectors"
-	securityenforcers "k8s.io/kubernetes/dya/pkg/security/enforcers"
-	securityverifiers "k8s.io/kubernetes/dya/pkg/security/verifiers"
-	"k8s.io/kubernetes/dya/pkg/simulation"
-	simulationanalyzers "k8s.io/kubernetes/dya/pkg/simulation/analyzers"
-	"k8s.io/kubernetes/dya/pkg/simulation/runners"
-	simvalidators "k8s.io/kubernetes/dya/pkg/simulation/validators"
+	"k8s.io/kubernetes/dya/pkg/health"
+	"k8s.io/kubernetes/dya/pkg/metrics"
 )
 
 var (
 	masterURL  string
 	kubeconfig string
 	workers    int
+	healthPort int
 )
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.IntVar(&workers, "workers", 1, "Number of worker threads for controllers.")
+	flag.IntVar(&healthPort, "health-port", 8080, "Port for health and metrics endpoints.")
 }
 
 func main() {
@@ -109,755 +59,113 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 21: Global Scale - FINAL PHASE                      ║")
-	fmt.Println("║   Version: 1.0.0                                            ║")
-	fmt.Println("║                                                              ║")
-	fmt.Println("║   🎯  ALL PHASES COMPLETED  🎯                              ║")
-	fmt.Println("║   AI-Native Infrastructure Resilience Platform               ║")
+	fmt.Println("║   Stage 1: Real Core Foundation                             ║")
+	fmt.Println("║   Version: 0.2.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
 	klog.Info("DYALEMCHIRZ controller starting...")
-	klog.Info("🚀 Launching Global Scale Engine - FINAL PHASE")
 
+	// Get Kubernetes config
 	cfg, err := getConfig()
 	if err != nil {
 		klog.Fatalf("Failed to get Kubernetes config: %v", err)
 	}
 
-	stopCh := make(chan struct{})
+	// Setup signal handling
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		<-signalCh
 		klog.Info("Received shutdown signal, stopping...")
-		close(stopCh)
+		cancel()
 	}()
 
-	// ============================================
-	// 1. CREATE AI ENGINE
-	// ============================================
-	klog.Info("Creating AI Engine...")
-	aiEngine := ai.NewEngine()
+	// Create health checker
+	healthChecker := health.NewChecker()
 
-	klog.Info("Registering AI components...")
-	aiEngine.RegisterDetector(&aidetectors.HealthDetector{})
-	aiEngine.RegisterDetector(&aidetectors.AnomalyDetector{})
-	aiEngine.RegisterScorer(&scorers.RiskScorer{})
-	aiEngine.RegisterScorer(&scorers.HealthScorer{})
-	aiEngine.RegisterPredictor(&aipredictors.FailurePredictor{})
-	aiEngine.RegisterPredictor(&aipredictors.ResourcePredictor{})
-
-	klog.Info("Starting AI Engine...")
-	aiEngine.Start()
-	defer aiEngine.Stop()
-	klog.Info("AI Engine started successfully")
-
-	// ============================================
-	// 2. CREATE RESILIENCE ENGINE
-	// ============================================
-	klog.Info("Creating Resilience Engine...")
-	resilienceEngine := resilience.NewEngine()
-
-	klog.Info("Registering Resilience components...")
-	resilienceEngine.RegisterHealthChecker(&checkers.HealthChecker{})
-	resilienceEngine.RegisterRecoveryPlanner(&planners.RecoveryPlanner{})
-
-	klog.Info("Starting Resilience Engine...")
-	resilienceEngine.Start()
-	defer resilienceEngine.Stop()
-	klog.Info("Resilience Engine started successfully")
-
-	// ============================================
-	// 3. CREATE DIGITAL TWIN ENGINE
-	// ============================================
-	klog.Info("Creating Digital Twin Engine...")
-	digitalTwinEngine := digitaltwin.NewEngine()
-
-	klog.Info("Registering Digital Twin components...")
-	digitalTwinEngine.RegisterSimulator(&simulators.FailureSimulator{})
-	digitalTwinEngine.RegisterAnalyzer(&dtanalyzers.ImpactAnalyzer{})
-
-	klog.Info("Starting Digital Twin Engine...")
-	digitalTwinEngine.Start()
-	defer digitalTwinEngine.Stop()
-	klog.Info("Digital Twin Engine started successfully")
-
-	// ============================================
-	// 4. CREATE SECURITY ENGINE
-	// ============================================
-	klog.Info("Creating Security Engine...")
-	securityEngine := security.NewEngine()
-
-	klog.Info("Registering Security components...")
-	securityEngine.RegisterVerifier(&securityverifiers.IdentityVerifier{})
-	securityEngine.RegisterEnforcer(&securityenforcers.PolicyEnforcer{})
-	securityEngine.RegisterAuditor(&securityauditors.AuditLogger{})
-	securityEngine.RegisterDetector(&securitydetectors.AnomalyDetector{})
-
-	klog.Info("Starting Security Engine...")
-	securityEngine.Start()
-	defer securityEngine.Stop()
-	klog.Info("Security Engine started successfully")
-
-	// ============================================
-	// 5. CREATE EDGE ENGINE
-	// ============================================
-	klog.Info("Creating Edge Engine...")
-	edgeEngine := edge.NewEngine()
-
-	klog.Info("Registering Edge components...")
-	edgeEngine.RegisterHandler(&edgehandlers.LocalHandler{})
-	edgeEngine.RegisterSyncer(&edgesyncers.Syncer{})
-	edgeEngine.RegisterEnforcer(&edgeenforcers.LocalEnforcer{})
-	edgeEngine.RegisterBuffer(buffers.NewBuffer())
-
-	klog.Info("Starting Edge Engine...")
-	edgeEngine.Start()
-	defer edgeEngine.Stop()
-	klog.Info("Edge Engine started successfully")
-
-	// ============================================
-	// 6. CREATE RECOVERY ORCHESTRATOR
-	// ============================================
-	klog.Info("Creating Recovery Orchestrator...")
-	recoveryOrchestrator := recovery.NewOrchestrator()
-
-	klog.Info("Registering Recovery components...")
-	recoveryOrchestrator.RegisterExecutor(&executors.BasicExecutor{})
-	recoveryOrchestrator.RegisterVerifier(&recoveryverifiers.BasicVerifier{})
-	recoveryOrchestrator.RegisterNotifier(&notifiers.BasicNotifier{})
-
-	klog.Info("Starting Recovery Orchestrator...")
-	recoveryOrchestrator.Start()
-	defer recoveryOrchestrator.Stop()
-	klog.Info("Recovery Orchestrator started successfully")
-
-	// ============================================
-	// 7. CREATE POLICY ENGINE
-	// ============================================
-	klog.Info("Creating Policy Engine...")
-	policyEngine := policy.NewEngine()
-
-	klog.Info("Registering Policy components...")
-	policyEngine.RegisterEvaluator(&policyevaluators.BasicEvaluator{})
-	policyEngine.RegisterEnforcer(&policyenforcers.BasicEnforcer{})
-	policyEngine.RegisterAuditor(&policyauditors.BasicAuditor{})
-
-	klog.Info("Starting Policy Engine...")
-	policyEngine.Start()
-	defer policyEngine.Stop()
-	klog.Info("Policy Engine started successfully")
-
-	// ============================================
-	// 8. CREATE KNOWLEDGE ENGINE
-	// ============================================
-	klog.Info("Creating Knowledge Engine...")
-	knowledgeEngine := knowledge.NewEngine()
-
-	klog.Info("Registering Knowledge components...")
-	knowledgeEngine.RegisterExtractor(&extractors.BasicExtractor{})
-	knowledgeEngine.RegisterAnalyzer(&knowledgeanalyzers.BasicAnalyzer{})
-	knowledgeEngine.RegisterQuerier(&queriers.BasicQuerier{})
-
-	klog.Info("Starting Knowledge Engine...")
-	knowledgeEngine.Start()
-	defer knowledgeEngine.Stop()
-	klog.Info("Knowledge Engine started successfully")
-
-	// ============================================
-	// 9. CREATE PREDICTIVE ENGINE
-	// ============================================
-	klog.Info("Creating Predictive Engine...")
-	predictiveEngine := predictive.NewEngine()
-
-	klog.Info("Registering Predictive components...")
-	predictiveEngine.RegisterPredictor(&predictivepredictors.FailurePredictor{})
-	predictiveEngine.RegisterForecaster(&forecasters.CapacityForecaster{})
-	predictiveEngine.RegisterRiskAnalyzer(&predictiveanalyzers.RiskAnalyzer{})
-	predictiveEngine.RegisterRecommender(&recommenders.BasicRecommender{})
-
-	klog.Info("Starting Predictive Engine...")
-	predictiveEngine.Start()
-	defer predictiveEngine.Stop()
-	klog.Info("Predictive Engine started successfully")
-
-	// ============================================
-	// 10. CREATE SIMULATION ENGINE
-	// ============================================
-	klog.Info("Creating Simulation Engine...")
-	simulationEngine := simulation.NewEngine()
-
-	klog.Info("Registering Simulation components...")
-	simulationEngine.RegisterRunner(&runners.BasicRunner{})
-	simulationEngine.RegisterValidator(&simvalidators.BasicValidator{})
-	simulationEngine.RegisterAnalyzer(&simulationanalyzers.BasicAnalyzer{})
-
-	klog.Info("Starting Simulation Engine...")
-	simulationEngine.Start()
-	defer simulationEngine.Stop()
-	klog.Info("Simulation Engine started successfully")
-
-	// ============================================
-	// 11. CREATE ENTERPRISE ENGINE
-	// ============================================
-	klog.Info("Creating Enterprise Engine...")
-	enterpriseEngine := enterprise.NewEngine()
-
-	klog.Info("Registering Enterprise components...")
-	enterpriseEngine.RegisterAuditor(&auditors.EnterpriseAuditor{})
-	enterpriseEngine.RegisterAPIHandler(&enterprisehandlers.APIHandler{})
-
-	enterpriseEngine.RegisterTenant(enterprise.Tenant{
-		ID:          "tenant-1",
-		Name:        "Default Tenant",
-		Description: "Default enterprise tenant",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	})
-
-	enterpriseEngine.RegisterRole(enterprise.Role{
-		ID:          "role-1",
-		Name:        "Admin",
-		Permissions: []string{"read", "write", "delete", "admin"},
-		CreatedAt:   time.Now(),
-	})
-
-	enterpriseEngine.RegisterOrganization(enterprise.Organization{
-		ID:          "org-1",
-		Name:        "Default Organization",
-		TenantID:    "tenant-1",
-		Members:     []string{"admin"},
-		CreatedAt:   time.Now(),
-	})
-
-	klog.Info("Starting Enterprise Engine...")
-	enterpriseEngine.Start()
-	defer enterpriseEngine.Stop()
-	klog.Info("Enterprise Engine started successfully")
-
-	// ============================================
-	// 12. CREATE MULTI-TENANT ENGINE
-	// ============================================
-	klog.Info("Creating Multi-Tenant Engine...")
-	multiTenantEngine := multitenant.NewEngine()
-
-	klog.Info("Registering Multi-Tenant components...")
-	multiTenantEngine.RegisterValidator(&mtvalidators.BasicValidator{})
-
-	multiTenantEngine.RegisterTenant(multitenant.Tenant{
-		ID:          "tenant-1",
-		Name:        "Default Tenant",
-		Description: "Default multi-tenant tenant",
-		Namespace:   "default",
-		Status:      "active",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	})
-
-	multiTenantEngine.RegisterQuota(multitenant.Quota{
-		TenantID:  "tenant-1",
-		Resource:  "cpu",
-		Limit:     100,
-		Used:      25,
-		CreatedAt: time.Now(),
-	})
-
-	multiTenantEngine.RegisterPolicy(multitenant.Policy{
-		TenantID: "tenant-1",
-		Name:     "default-policy",
-		Rules: map[string]interface{}{
-			"allowAll": true,
-		},
-		CreatedAt: time.Now(),
-	})
-
-	klog.Info("Starting Multi-Tenant Engine...")
-	multiTenantEngine.Start()
-	defer multiTenantEngine.Stop()
-	klog.Info("Multi-Tenant Engine started successfully")
-
-	// ============================================
-	// 13. CREATE GLOBAL EDGE ENGINE
-	// ============================================
-	klog.Info("Creating Global Edge Engine...")
-	globalEdgeEngine := globaledge.NewEngine()
-
-	klog.Info("Registering Global Edge components...")
-	globalEdgeEngine.RegisterRouter(&routers.BasicRouter{})
-	globalEdgeEngine.RegisterSyncer(&globalsyncers.BasicSyncer{})
-
-	globalEdgeEngine.RegisterRegion(globaledge.Region{
-		ID:          "region-1",
-		Name:        "US West",
-		Location:    "us-west-1",
-		Latency:     50,
-		CreatedAt:   time.Now(),
-	})
-
-	globalEdgeEngine.RegisterCluster(globaledge.Cluster{
-		ID:          "cluster-1",
-		Name:        "Primary Cluster",
-		Region:      "region-1",
-		Endpoint:    "https://cluster-1.example.com",
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	globalEdgeEngine.RegisterGateway(globaledge.Gateway{
-		ID:          "gateway-1",
-		Name:        "Primary Gateway",
-		ClusterID:   "cluster-1",
-		Endpoint:    "https://gateway-1.example.com",
-		CreatedAt:   time.Now(),
-	})
-
-	klog.Info("Starting Global Edge Engine...")
-	globalEdgeEngine.Start()
-	defer globalEdgeEngine.Stop()
-	klog.Info("Global Edge Engine started successfully")
-
-	// ============================================
-	// 14. CREATE DEVELOPER ENGINE
-	// ============================================
-	klog.Info("Creating Developer Engine...")
-	developerEngine := developer.NewEngine()
-
-	klog.Info("Registering Developer components...")
-	developerEngine.RegisterSDK(developer.SDK{
-		ID:          "sdk-go",
-		Name:        "DYALEMCHIRZ Go SDK",
-		Version:     "1.0.0",
-		Language:    "go",
-		Repository:  "https://github.com/kryntelxf/dya-sdk-go",
-		Description: "Go SDK for DYALEMCHIRZ platform",
-		CreatedAt:   time.Now(),
-	})
-
-	developerEngine.RegisterSDK(developer.SDK{
-		ID:          "sdk-python",
-		Name:        "DYALEMCHIRZ Python SDK",
-		Version:     "1.0.0",
-		Language:    "python",
-		Repository:  "https://github.com/kryntelxf/dya-sdk-python",
-		Description: "Python SDK for DYALEMCHIRZ platform",
-		CreatedAt:   time.Now(),
-	})
-
-	developerEngine.RegisterPlugin(developer.Plugin{
-		ID:          "plugin-monitor",
-		Name:        "Monitor Plugin",
-		Version:     "1.0.0",
-		Type:        "monitoring",
-		Author:      "DYALEMCHIRZ Team",
-		Enabled:     true,
-		CreatedAt:   time.Now(),
-	})
-
-	developerEngine.RegisterTemplate(developer.Template{
-		ID:          "template-go",
-		Name:        "Go Service Template",
-		Type:        "service",
-		Path:        "/templates/go-service",
-		Description: "Template for Go microservices",
-		CreatedAt:   time.Now(),
-	})
-
-	developerEngine.RegisterTool(developer.Tool{
-		ID:          "tool-dya-cli",
-		Name:        "DYALEMCHIRZ CLI",
-		Command:     "dya",
-		Description: "Command line tool for DYALEMCHIRZ",
-		CreatedAt:   time.Now(),
-	})
-
-	developerEngine.RegisterDoc(developer.Doc{
-		ID:          "doc-api",
-		Title:       "API Reference",
-		Path:        "/docs/api",
-		Description: "Complete API reference documentation",
-		UpdatedAt:   time.Now(),
-	})
-
-	klog.Info("Starting Developer Engine...")
-	developerEngine.Start()
-	defer developerEngine.Stop()
-	klog.Info("Developer Engine started successfully")
-
-	// ============================================
-	// 15. CREATE ECOSYSTEM ENGINE
-	// ============================================
-	klog.Info("Creating Ecosystem Engine...")
-	ecosystemEngine := ecosystem.NewEngine()
-
-	klog.Info("Registering Ecosystem components...")
-	officialSDKs := sdks.GetOfficialSDKs()
-	for _, sdk := range officialSDKs {
-		if s, ok := sdk.(ecosystem.SDK); ok {
-			ecosystemEngine.RegisterSDK(s)
-		}
-	}
-
-	ecosystemEngine.RegisterPlugin(ecosystem.Plugin{
-		ID:          "plugin-kafka",
-		Name:        "Kafka Integration",
-		Type:        "integration",
-		Author:      "DYALEMCHIRZ Team",
-		Version:     "1.0.0",
-		Repository:  "https://github.com/kryntelxf/dya-plugin-kafka",
-		Downloads:   1500,
-		Rating:      4.8,
-		CreatedAt:   time.Now(),
-	})
-
-	ecosystemEngine.RegisterPlugin(ecosystem.Plugin{
-		ID:          "plugin-prometheus",
-		Name:        "Prometheus Integration",
-		Type:        "monitoring",
-		Author:      "DYALEMCHIRZ Team",
-		Version:     "1.0.0",
-		Repository:  "https://github.com/kryntelxf/dya-plugin-prometheus",
-		Downloads:   2300,
-		Rating:      4.9,
-		CreatedAt:   time.Now(),
-	})
-
-	ecosystemEngine.RegisterIntegration(ecosystem.Integration{
-		ID:          "integration-aws",
-		Name:        "AWS Cloud Integration",
-		Partner:     "Amazon Web Services",
-		Type:        "cloud",
-		Description: "Integration with AWS services",
-		Documentation: "https://docs.dyalemchirz.com/integrations/aws",
-		Status:      "stable",
-		CreatedAt:   time.Now(),
-	})
-
-	ecosystemEngine.RegisterExample(ecosystem.Example{
-		ID:          "example-go",
-		Name:        "Go Microservice Example",
-		Language:    "go",
-		Path:        "/examples/go-microservice",
-		Description: "Example of a Go microservice with DYALEMCHIRZ",
-		CreatedAt:   time.Now(),
-	})
-
-	ecosystemEngine.RegisterGuide(ecosystem.Guide{
-		ID:          "guide-getting-started",
-		Title:       "Getting Started Guide",
-		Category:    "getting-started",
-		Path:        "/guides/getting-started",
-		Description: "How to get started with DYALEMCHIRZ",
-		UpdatedAt:   time.Now(),
-	})
-
-	ecosystemEngine.RegisterPartner(ecosystem.Partner{
-		ID:          "partner-google",
-		Name:        "Google Cloud",
-		Website:     "https://cloud.google.com",
-		Description: "Google Cloud Platform integration partner",
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	klog.Info("Starting Ecosystem Engine...")
-	ecosystemEngine.Start()
-	defer ecosystemEngine.Stop()
-	klog.Info("Ecosystem Engine started successfully")
-
-	// ============================================
-	// 16. CREATE COMMERCIAL PLATFORM ENGINE
-	// ============================================
-	klog.Info("Creating Commercial Platform Engine...")
-	commercialEngine := commercial.NewEngine()
-
-	klog.Info("Registering Commercial components...")
-	enterpriseLicense := licenses.GetEnterpriseLicense()
-	if l, ok := enterpriseLicense.(commercial.License); ok {
-		commercialEngine.RegisterLicense(l)
-	}
-
-	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
-		ID:           "support-basic",
-		Name:         "Basic Support",
-		Level:        "basic",
-		ResponseTime: "24 hours",
-		Hours:        "Business hours",
-		CreatedAt:    time.Now(),
-	})
-
-	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
-		ID:           "support-premium",
-		Name:         "Premium Support",
-		Level:        "premium",
-		ResponseTime: "4 hours",
-		Hours:        "24/7",
-		CreatedAt:    time.Now(),
-	})
-
-	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
-		ID:           "support-enterprise",
-		Name:         "Enterprise Support",
-		Level:        "enterprise",
-		ResponseTime: "1 hour",
-		Hours:        "24/7 with SLA",
-		CreatedAt:    time.Now(),
-	})
-
-	commercialEngine.RegisterManagedService(commercial.ManagedService{
-		ID:          "managed-basic",
-		Name:        "Basic Managed Service",
-		Description: "Basic managed service for DYALEMCHIRZ deployment",
-		Price:       "Contact Sales",
-		CreatedAt:   time.Now(),
-	})
-
-	commercialEngine.RegisterProfessionalService(commercial.ProfessionalService{
-		ID:          "prof-consulting",
-		Name:        "Consulting Services",
-		Type:        "consulting",
-		Description: "Expert consulting for DYALEMCHIRZ implementation",
-		Price:       "Contact Sales",
-		CreatedAt:   time.Now(),
-	})
-
-	commercialEngine.RegisterProfessionalService(commercial.ProfessionalService{
-		ID:          "prof-training",
-		Name:        "Training Services",
-		Type:        "training",
-		Description: "Comprehensive training for DYALEMCHIRZ platform",
-		Price:       "Contact Sales",
-		CreatedAt:   time.Now(),
-	})
-
-	commercialEngine.RegisterPartner(commercial.Partner{
-		ID:          "partner-acme",
-		Name:        "ACME Consulting",
-		Type:        "consultant",
-		Website:     "https://acme.com",
-		CreatedAt:   time.Now(),
-	})
-
-	commercialEngine.RegisterCommercialAPI(commercial.CommercialAPI{
-		ID:          "api-enterprise",
-		Name:        "Enterprise API",
-		Endpoint:    "https://api.dyalemchirz.com/v1/enterprise",
-		Description: "Enterprise-grade API with advanced features",
-		Pricing:     "Contact Sales",
-		CreatedAt:   time.Now(),
-	})
-
-	klog.Info("Starting Commercial Platform Engine...")
-	commercialEngine.Start()
-	defer commercialEngine.Stop()
-	klog.Info("Commercial Platform Engine started successfully")
-
-	// ============================================
-	// 17. CREATE GLOBAL SCALE ENGINE (FINAL PHASE)
-	// ============================================
-	klog.Info("Creating Global Scale Engine - FINAL PHASE...")
-	globalScaleEngine := globalscale.NewEngine()
-
-	klog.Info("Registering Global Scale components...")
-	// Register global regions
-	globalRegions := regions.GetGlobalRegions()
-	for _, region := range globalRegions {
-		if r, ok := region.(globalscale.Region); ok {
-			globalScaleEngine.RegisterRegion(r)
-		}
-	}
-
-	// Register clusters
-	globalScaleEngine.RegisterCluster(globalscale.Cluster{
-		ID:          "cluster-us-east",
-		Name:        "US East Cluster",
-		Region:      "region-us-east",
-		Nodes:       100,
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	globalScaleEngine.RegisterCluster(globalscale.Cluster{
-		ID:          "cluster-us-west",
-		Name:        "US West Cluster",
-		Region:      "region-us-west",
-		Nodes:       100,
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	globalScaleEngine.RegisterCluster(globalscale.Cluster{
-		ID:          "cluster-eu-west",
-		Name:        "EU West Cluster",
-		Region:      "region-eu-west",
-		Nodes:       100,
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	globalScaleEngine.RegisterCluster(globalscale.Cluster{
-		ID:          "cluster-ap-southeast",
-		Name:        "AP Southeast Cluster",
-		Region:      "region-ap-southeast",
-		Nodes:       100,
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	// Register load balancers
-	globalScaleEngine.RegisterLoadBalancer(globalscale.LoadBalancer{
-		ID:          "lb-us-east",
-		Name:        "US East Load Balancer",
-		Region:      "region-us-east",
-		Endpoint:    "https://lb-us-east.dyalemchirz.com",
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	globalScaleEngine.RegisterLoadBalancer(globalscale.LoadBalancer{
-		ID:          "lb-us-west",
-		Name:        "US West Load Balancer",
-		Region:      "region-us-west",
-		Endpoint:    "https://lb-us-west.dyalemchirz.com",
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	globalScaleEngine.RegisterLoadBalancer(globalscale.LoadBalancer{
-		ID:          "lb-eu-west",
-		Name:        "EU West Load Balancer",
-		Region:      "region-eu-west",
-		Endpoint:    "https://lb-eu-west.dyalemchirz.com",
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	globalScaleEngine.RegisterLoadBalancer(globalscale.LoadBalancer{
-		ID:          "lb-ap-southeast",
-		Name:        "AP Southeast Load Balancer",
-		Region:      "region-ap-southeast",
-		Endpoint:    "https://lb-ap-southeast.dyalemchirz.com",
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	// Register cache nodes
-	globalScaleEngine.RegisterCacheNode(globalscale.CacheNode{
-		ID:          "cache-us-east",
-		Name:        "US East Cache",
-		Region:      "region-us-east",
-		Size:        1024,
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	// Register monitors
-	globalScaleEngine.RegisterMonitor(globalscale.Monitor{
-		ID:          "monitor-us-east",
-		Name:        "US East Monitor",
-		Region:      "region-us-east",
-		Type:        "health",
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	// Register auto-scalers
-	globalScaleEngine.RegisterAutoScaler(globalscale.AutoScaler{
-		ID:          "scaler-us-east",
-		Name:        "US East Auto-Scaler",
-		Region:      "region-us-east",
-		MinNodes:    10,
-		MaxNodes:    200,
-		Status:      "active",
-		CreatedAt:   time.Now(),
-	})
-
-	// Register disaster recovery
-	globalScaleEngine.RegisterDisasterRecovery(globalscale.DisasterRecovery{
-		ID:           "dr-us-east",
-		Name:         "US East Disaster Recovery",
-		Region:       "region-us-east",
-		BackupRegion: "region-us-west",
-		RPO:          "5 minutes",
-		RTO:          "15 minutes",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-	})
-
-	klog.Info("Starting Global Scale Engine...")
-	globalScaleEngine.Start()
-	defer globalScaleEngine.Stop()
-	klog.Info("✅ Global Scale Engine started successfully - FINAL PHASE COMPLETE!")
-
-	// ============================================
-	// 18. CREATE ASSET GRAPH CONTROLLER
-	// ============================================
+	// Create and start controller
 	klog.Info("Creating Asset Graph controller...")
-	assetGraphController, err := assetgraph.NewController(cfg)
+	controller, err := assetgraph.NewController(cfg)
 	if err != nil {
-		klog.Fatalf("Failed to create Asset Graph controller: %v", err)
+		klog.Fatalf("Failed to create controller: %v", err)
 	}
 
+	// Mark components as healthy
+	healthChecker.SetComponent("controller", true)
+	healthChecker.SetComponent("kubernetes-api", true)
+	healthChecker.SetReady(true)
+
+	// Start health server
+	go startHealthServer(healthPort, healthChecker)
+
+	// Run controller
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	if err := controller.Run(ctx, workers); err != nil {
+		klog.Fatalf("Controller failed: %v", err)
+	}
 
-	go func() {
-		if err := assetGraphController.Run(ctx, workers); err != nil {
-			klog.Fatalf("Asset Graph controller failed: %v", err)
-		}
-	}()
-
-	// ============================================
-	// 19. ALL COMPONENTS STARTED - FINAL
-	// ============================================
-	klog.Info("🎉 ALL COMPONENTS STARTED SUCCESSFULLY 🎉")
-	klog.Info("DYALEMCHIRZ is ready - Global Scale Platform")
-	klog.Info("")
-	klog.Info("╔══════════════════════════════════════════════════════════════╗")
-	klog.Info("║  ✅ ALL 21 PHASES COMPLETED ✅                                ║")
-	klog.Info("║                                                              ║")
-	klog.Info("║  🚀 DYALEMCHIRZ - AI-Native Resilience Operating Platform     ║")
-	klog.Info("║                                                              ║")
-	klog.Info("║  Components Running:                                         ║")
-	klog.Info("║  ✅ AI Engine                                                ║")
-	klog.Info("║  ✅ Resilience Engine                                        ║")
-	klog.Info("║  ✅ Digital Twin Engine                                      ║")
-	klog.Info("║  ✅ Security Engine                                          ║")
-	klog.Info("║  ✅ Edge Engine                                              ║")
-	klog.Info("║  ✅ Recovery Orchestrator                                    ║")
-	klog.Info("║  ✅ Policy Engine                                            ║")
-	klog.Info("║  ✅ Knowledge Engine                                         ║")
-	klog.Info("║  ✅ Predictive Engine                                        ║")
-	klog.Info("║  ✅ Simulation Engine                                        ║")
-	klog.Info("║  ✅ Enterprise Engine                                        ║")
-	klog.Info("║  ✅ Multi-Tenant Engine                                      ║")
-	klog.Info("║  ✅ Global Edge Engine                                       ║")
-	klog.Info("║  ✅ Developer Engine                                         ║")
-	klog.Info("║  ✅ Ecosystem Engine                                         ║")
-	klog.Info("║  ✅ Commercial Platform Engine                               ║")
-	klog.Info("║  ✅ Global Scale Engine                                      ║")
-	klog.Info("║  ✅ Asset Graph Controller                                   ║")
-	klog.Info("║                                                              ║")
-	klog.Info("║  🌍 Global Scale Platform Ready                             ║")
-	klog.Info("╚══════════════════════════════════════════════════════════════╝")
-	klog.Info("")
-	klog.Info("Press Ctrl+C to stop")
-
-	// Wait for shutdown signal
-	<-stopCh
-	klog.Info("Shutting down gracefully...")
-	cancel()
-
-	time.Sleep(2 * time.Second)
-	klog.Info("Shutdown complete")
+	klog.Info("Controller shutdown complete")
 }
 
-// getConfig returns the rest.Config for the Kubernetes API server
+// startHealthServer starts the health endpoint
+func startHealthServer(port int, checker *health.Checker) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		if checker.IsHealthy() {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("ok"))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("unhealthy"))
+		}
+	})
+
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if checker.IsReady() {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("ready"))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("not ready"))
+		}
+	})
+
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		metrics := metrics.GetMetrics()
+		w.Header().Set("Content-Type", "text/plain")
+		for name, value := range metrics {
+			fmt.Fprintf(w, "# HELP %s DYALEMCHIRZ metric\n", name)
+			fmt.Fprintf(w, "# TYPE %s gauge\n", name)
+			fmt.Fprintf(w, "%s %f\n", name, value)
+		}
+	})
+
+	addr := fmt.Sprintf(":%d", port)
+	klog.Infof("Health server listening on %s", addr)
+
+	server := &http.Server{
+		Addr:              addr,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		klog.Errorf("Health server failed: %v", err)
+	}
+}
+
+// getConfig returns the rest.Config
 func getConfig() (*rest.Config, error) {
 	if kubeconfig != "" {
 		return clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	}
-	return rest.InClusterConfig()
+	if _, err := rest.InClusterConfig(); err == nil {
+		return rest.InClusterConfig()
+	}
+	return nil, fmt.Errorf("could not get Kubernetes config. Use -kubeconfig or run in-cluster")
 }
