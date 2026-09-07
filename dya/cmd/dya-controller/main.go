@@ -67,6 +67,10 @@ import (
 	securitydetectors "k8s.io/kubernetes/dya/pkg/security/detectors"
 	securityenforcers "k8s.io/kubernetes/dya/pkg/security/enforcers"
 	securityverifiers "k8s.io/kubernetes/dya/pkg/security/verifiers"
+	"k8s.io/kubernetes/dya/pkg/simulation"
+	simulationanalyzers "k8s.io/kubernetes/dya/pkg/simulation/analyzers"
+	"k8s.io/kubernetes/dya/pkg/simulation/runners"
+	"k8s.io/kubernetes/dya/pkg/simulation/validators"
 )
 
 var (
@@ -90,7 +94,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 13: Predictive Infrastructure Intelligence          ║")
+	fmt.Println("║   Phase 14: Large-Scale Simulation                          ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -261,7 +265,23 @@ func main() {
 	klog.Info("Predictive Engine started successfully")
 
 	// ============================================
-	// 10. CREATE ASSET GRAPH CONTROLLER
+	// 10. CREATE SIMULATION ENGINE
+	// ============================================
+	klog.Info("Creating Simulation Engine...")
+	simulationEngine := simulation.NewEngine()
+
+	klog.Info("Registering Simulation components...")
+	simulationEngine.RegisterRunner(&runners.BasicRunner{})
+	simulationEngine.RegisterValidator(&validators.BasicValidator{})
+	simulationEngine.RegisterAnalyzer(&simulationanalyzers.BasicAnalyzer{})
+
+	klog.Info("Starting Simulation Engine...")
+	simulationEngine.Start()
+	defer simulationEngine.Stop()
+	klog.Info("Simulation Engine started successfully")
+
+	// ============================================
+	// 11. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -280,7 +300,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 11. ALL COMPONENTS STARTED
+	// 12. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -296,6 +316,7 @@ func main() {
 	klog.Info("║  ✅ Policy Engine (policy evaluation, enforcement, audit)     ║")
 	klog.Info("║  ✅ Knowledge Engine (knowledge extraction, analysis, query)  ║")
 	klog.Info("║  ✅ Predictive Engine (failure prediction, forecasting)       ║")
+	klog.Info("║  ✅ Simulation Engine (large-scale simulation, validation)    ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
