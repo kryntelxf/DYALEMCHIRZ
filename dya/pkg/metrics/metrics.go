@@ -23,14 +23,14 @@ import (
 )
 
 var (
-	mu               sync.RWMutex
-	graphNodes       float64
-	graphEdges       float64
-	reconciliations  float64
+	mu                   sync.RWMutex
+	graphNodes           float64
+	graphEdges           float64
+	reconciliations      float64
 	reconciliationErrors float64
-	eventsTotal      float64
-	eventsProcessed  float64
-	eventsFailed     float64
+	eventsTotal          float64
+	eventsProcessed      float64
+	eventsFailed         float64
 )
 
 // SetGraphMetrics updates graph metrics
