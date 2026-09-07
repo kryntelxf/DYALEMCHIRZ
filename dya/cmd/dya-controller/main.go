@@ -45,6 +45,9 @@ import (
 	"k8s.io/kubernetes/dya/pkg/enterprise"
 	"k8s.io/kubernetes/dya/pkg/enterprise/auditors"
 	enterprisehandlers "k8s.io/kubernetes/dya/pkg/enterprise/handlers"
+	"k8s.io/kubernetes/dya/pkg/globaledge"
+	"k8s.io/kubernetes/dya/pkg/globaledge/routers"
+	"k8s.io/kubernetes/dya/pkg/globaledge/syncers"
 	"k8s.io/kubernetes/dya/pkg/knowledge"
 	knowledgeanalyzers "k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
 	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
@@ -99,7 +102,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 16: Multi-Tenancy                                   ║")
+	fmt.Println("║   Phase 17: Global Edge Architecture                        ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -365,7 +368,50 @@ func main() {
 	klog.Info("Multi-Tenant Engine started successfully")
 
 	// ============================================
-	// 13. CREATE ASSET GRAPH CONTROLLER
+	// 13. CREATE GLOBAL EDGE ENGINE
+	// ============================================
+	klog.Info("Creating Global Edge Engine...")
+	globalEdgeEngine := globaledge.NewEngine()
+
+	klog.Info("Registering Global Edge components...")
+	globalEdgeEngine.RegisterRouter(&routers.BasicRouter{})
+	globalEdgeEngine.RegisterSyncer(&syncers.BasicSyncer{})
+
+	// Register sample region
+	globalEdgeEngine.RegisterRegion(globaledge.Region{
+		ID:          "region-1",
+		Name:        "US West",
+		Location:    "us-west-1",
+		Latency:     50,
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample cluster
+	globalEdgeEngine.RegisterCluster(globaledge.Cluster{
+		ID:          "cluster-1",
+		Name:        "Primary Cluster",
+		Region:      "region-1",
+		Endpoint:    "https://cluster-1.example.com",
+		Status:      "active",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample gateway
+	globalEdgeEngine.RegisterGateway(globaledge.Gateway{
+		ID:          "gateway-1",
+		Name:        "Primary Gateway",
+		ClusterID:   "cluster-1",
+		Endpoint:    "https://gateway-1.example.com",
+		CreatedAt:   time.Now(),
+	})
+
+	klog.Info("Starting Global Edge Engine...")
+	globalEdgeEngine.Start()
+	defer globalEdgeEngine.Stop()
+	klog.Info("Global Edge Engine started successfully")
+
+	// ============================================
+	// 14. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -384,7 +430,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 14. ALL COMPONENTS STARTED
+	// 15. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -403,6 +449,7 @@ func main() {
 	klog.Info("║  ✅ Simulation Engine (large-scale simulation, validation)    ║")
 	klog.Info("║  ✅ Enterprise Engine (multi-tenancy, RBAC, API)             ║")
 	klog.Info("║  ✅ Multi-Tenant Engine (tenant isolation, quotas, policies) ║")
+	klog.Info("║  ✅ Global Edge Engine (global clusters, regions, routing)   ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
