@@ -33,6 +33,8 @@ import (
 	aidetectors "k8s.io/kubernetes/dya/pkg/ai/detectors"
 	aipredictors "k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
+	"k8s.io/kubernetes/dya/pkg/commercial"
+	"k8s.io/kubernetes/dya/pkg/commercial/licenses"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/developer"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
@@ -105,7 +107,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 19: Ecosystem / SDK                                 ║")
+	fmt.Println("║   Phase 20: Commercial Platform                             ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -484,7 +486,6 @@ func main() {
 	ecosystemEngine := ecosystem.NewEngine()
 
 	klog.Info("Registering Ecosystem components...")
-	// Register official SDKs
 	officialSDKs := sdks.GetOfficialSDKs()
 	for _, sdk := range officialSDKs {
 		if s, ok := sdk.(ecosystem.SDK); ok {
@@ -492,7 +493,6 @@ func main() {
 		}
 	}
 
-	// Register sample plugins
 	ecosystemEngine.RegisterPlugin(ecosystem.Plugin{
 		ID:          "plugin-kafka",
 		Name:        "Kafka Integration",
@@ -517,7 +517,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample integration
 	ecosystemEngine.RegisterIntegration(ecosystem.Integration{
 		ID:          "integration-aws",
 		Name:        "AWS Cloud Integration",
@@ -529,7 +528,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample example
 	ecosystemEngine.RegisterExample(ecosystem.Example{
 		ID:          "example-go",
 		Name:        "Go Microservice Example",
@@ -539,7 +537,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample guide
 	ecosystemEngine.RegisterGuide(ecosystem.Guide{
 		ID:          "guide-getting-started",
 		Title:       "Getting Started Guide",
@@ -549,7 +546,6 @@ func main() {
 		UpdatedAt:   time.Now(),
 	})
 
-	// Register sample partner
 	ecosystemEngine.RegisterPartner(ecosystem.Partner{
 		ID:          "partner-google",
 		Name:        "Google Cloud",
@@ -565,7 +561,100 @@ func main() {
 	klog.Info("Ecosystem Engine started successfully")
 
 	// ============================================
-	// 16. CREATE ASSET GRAPH CONTROLLER
+	// 16. CREATE COMMERCIAL PLATFORM ENGINE
+	// ============================================
+	klog.Info("Creating Commercial Platform Engine...")
+	commercialEngine := commercial.NewEngine()
+
+	klog.Info("Registering Commercial components...")
+	// Register enterprise license
+	enterpriseLicense := licenses.GetEnterpriseLicense()
+	if l, ok := enterpriseLicense.(commercial.License); ok {
+		commercialEngine.RegisterLicense(l)
+	}
+
+	// Register support plans
+	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
+		ID:           "support-basic",
+		Name:         "Basic Support",
+		Level:        "basic",
+		ResponseTime: "24 hours",
+		Hours:        "Business hours",
+		CreatedAt:    time.Now(),
+	})
+
+	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
+		ID:           "support-premium",
+		Name:         "Premium Support",
+		Level:        "premium",
+		ResponseTime: "4 hours",
+		Hours:        "24/7",
+		CreatedAt:    time.Now(),
+	})
+
+	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
+		ID:           "support-enterprise",
+		Name:         "Enterprise Support",
+		Level:        "enterprise",
+		ResponseTime: "1 hour",
+		Hours:        "24/7 with SLA",
+		CreatedAt:    time.Now(),
+	})
+
+	// Register managed services
+	commercialEngine.RegisterManagedService(commercial.ManagedService{
+		ID:          "managed-basic",
+		Name:        "Basic Managed Service",
+		Description: "Basic managed service for DYALEMCHIRZ deployment",
+		Price:       "Contact Sales",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register professional services
+	commercialEngine.RegisterProfessionalService(commercial.ProfessionalService{
+		ID:          "prof-consulting",
+		Name:        "Consulting Services",
+		Type:        "consulting",
+		Description: "Expert consulting for DYALEMCHIRZ implementation",
+		Price:       "Contact Sales",
+		CreatedAt:   time.Now(),
+	})
+
+	commercialEngine.RegisterProfessionalService(commercial.ProfessionalService{
+		ID:          "prof-training",
+		Name:        "Training Services",
+		Type:        "training",
+		Description: "Comprehensive training for DYALEMCHIRZ platform",
+		Price:       "Contact Sales",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register partners
+	commercialEngine.RegisterPartner(commercial.Partner{
+		ID:          "partner-acme",
+		Name:        "ACME Consulting",
+		Type:        "consultant",
+		Website:     "https://acme.com",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register commercial APIs
+	commercialEngine.RegisterCommercialAPI(commercial.CommercialAPI{
+		ID:          "api-enterprise",
+		Name:        "Enterprise API",
+		Endpoint:    "https://api.dyalemchirz.com/v1/enterprise",
+		Description: "Enterprise-grade API with advanced features",
+		Pricing:     "Contact Sales",
+		CreatedAt:   time.Now(),
+	})
+
+	klog.Info("Starting Commercial Platform Engine...")
+	commercialEngine.Start()
+	defer commercialEngine.Stop()
+	klog.Info("Commercial Platform Engine started successfully")
+
+	// ============================================
+	// 17. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -584,7 +673,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 17. ALL COMPONENTS STARTED
+	// 18. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -606,6 +695,7 @@ func main() {
 	klog.Info("║  ✅ Global Edge Engine (global clusters, regions, routing)   ║")
 	klog.Info("║  ✅ Developer Engine (SDK, plugins, templates, tools, docs)  ║")
 	klog.Info("║  ✅ Ecosystem Engine (SDKs, plugins, integrations, partners) ║")
+	klog.Info("║  ✅ Commercial Platform Engine (licensing, support, services)║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
