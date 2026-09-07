@@ -21,7 +21,6 @@ import (
 	"time"
 )
 
-// Checker provides health checking
 type Checker struct {
 	mu         sync.RWMutex
 	started    time.Time
@@ -29,7 +28,6 @@ type Checker struct {
 	components map[string]bool
 }
 
-// NewChecker creates a new health checker
 func NewChecker() *Checker {
 	return &Checker{
 		started:    time.Now(),
@@ -38,26 +36,21 @@ func NewChecker() *Checker {
 	}
 }
 
-// SetReady sets the ready state
 func (c *Checker) SetReady(ready bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.ready = ready
 }
 
-// SetComponent sets a component's health
 func (c *Checker) SetComponent(name string, healthy bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.components[name] = healthy
 }
 
-// IsHealthy returns the overall health
 func (c *Checker) IsHealthy() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
-	// Check all components
 	for _, healthy := range c.components {
 		if !healthy {
 			return false
@@ -66,14 +59,12 @@ func (c *Checker) IsHealthy() bool {
 	return true
 }
 
-// IsReady returns the ready state
 func (c *Checker) IsReady() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.ready
 }
 
-// Uptime returns the uptime
 func (c *Checker) Uptime() time.Duration {
 	return time.Since(c.started)
 }
