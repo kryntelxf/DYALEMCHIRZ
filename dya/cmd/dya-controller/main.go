@@ -50,7 +50,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
 	"k8s.io/kubernetes/dya/pkg/knowledge/queriers"
 	"k8s.io/kubernetes/dya/pkg/multitenant"
-	"k8s.io/kubernetes/dya/pkg/multitenant/validators"
+	mtvalidators "k8s.io/kubernetes/dya/pkg/multitenant/validators"
 	"k8s.io/kubernetes/dya/pkg/policy"
 	policyauditors "k8s.io/kubernetes/dya/pkg/policy/auditors"
 	policyenforcers "k8s.io/kubernetes/dya/pkg/policy/enforcers"
@@ -75,7 +75,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/simulation"
 	simulationanalyzers "k8s.io/kubernetes/dya/pkg/simulation/analyzers"
 	"k8s.io/kubernetes/dya/pkg/simulation/runners"
-	"k8s.io/kubernetes/dya/pkg/simulation/validators"
+	simvalidators "k8s.io/kubernetes/dya/pkg/simulation/validators"
 )
 
 var (
@@ -277,7 +277,7 @@ func main() {
 
 	klog.Info("Registering Simulation components...")
 	simulationEngine.RegisterRunner(&runners.BasicRunner{})
-	simulationEngine.RegisterValidator(&validators.BasicValidator{})
+	simulationEngine.RegisterValidator(&simvalidators.BasicValidator{})
 	simulationEngine.RegisterAnalyzer(&simulationanalyzers.BasicAnalyzer{})
 
 	klog.Info("Starting Simulation Engine...")
@@ -295,7 +295,6 @@ func main() {
 	enterpriseEngine.RegisterAuditor(&auditors.EnterpriseAuditor{})
 	enterpriseEngine.RegisterAPIHandler(&enterprisehandlers.APIHandler{})
 
-	// Register sample tenant, role, organization
 	enterpriseEngine.RegisterTenant(enterprise.Tenant{
 		ID:          "tenant-1",
 		Name:        "Default Tenant",
@@ -331,9 +330,8 @@ func main() {
 	multiTenantEngine := multitenant.NewEngine()
 
 	klog.Info("Registering Multi-Tenant components...")
-	multiTenantEngine.RegisterValidator(&validators.BasicValidator{})
+	multiTenantEngine.RegisterValidator(&mtvalidators.BasicValidator{})
 
-	// Register sample tenant
 	multiTenantEngine.RegisterTenant(multitenant.Tenant{
 		ID:          "tenant-1",
 		Name:        "Default Tenant",
@@ -344,7 +342,6 @@ func main() {
 		UpdatedAt:   time.Now(),
 	})
 
-	// Register sample quota
 	multiTenantEngine.RegisterQuota(multitenant.Quota{
 		TenantID:  "tenant-1",
 		Resource:  "cpu",
@@ -353,7 +350,6 @@ func main() {
 		CreatedAt: time.Now(),
 	})
 
-	// Register sample policy
 	multiTenantEngine.RegisterPolicy(multitenant.Policy{
 		TenantID: "tenant-1",
 		Name:     "default-policy",
