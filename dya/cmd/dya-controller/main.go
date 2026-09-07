@@ -20,7 +20,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -137,9 +136,9 @@ func startHealthServer(port int, checker *health.Checker) {
 	})
 
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		metrics := metrics.GetMetrics()
+		metricsData := metrics.GetMetrics()
 		w.Header().Set("Content-Type", "text/plain")
-		for name, value := range metrics {
+		for name, value := range metricsData {
 			fmt.Fprintf(w, "# HELP %s DYALEMCHIRZ metric\n", name)
 			fmt.Fprintf(w, "# TYPE %s gauge\n", name)
 			fmt.Fprintf(w, "%s %f\n", name, value)
