@@ -93,13 +93,14 @@ func (p *Pipeline) RegisterHandler(handler Handler) {
 
 // Process processes an event through the pipeline
 func (p *Pipeline) Process(ctx context.Context, event *Event) error {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+	if event == nil {
+		return fmt.Errorf("event is nil")
+	}
 
-	p.metrics.mu.Lock()
+	p.mu.Lock()
 	p.metrics.Total++
 	p.metrics.LastEvent = time.Now()
-	p.metrics.mu.Unlock()
+	p.mu.Unlock()
 
 	// Process through processors
 	current := event
@@ -107,9 +108,9 @@ func (p *Pipeline) Process(ctx context.Context, event *Event) error {
 		var err error
 		current, err = processor.Process(current)
 		if err != nil {
-			p.metrics.mu.Lock()
+			p.mu.Lock()
 			p.metrics.Failed++
-			p.metrics.mu.Unlock()
+			p.mu.Unlock()
 			return fmt.Errorf("processor %s failed: %w", processor.Name(), err)
 		}
 	}
@@ -121,11 +122,14 @@ func (p *Pipeline) Process(ctx context.Context, event *Event) error {
 		}
 	}
 
-	p.metrics.mu.Lock()
+	p.mu.Lock()
 	p.metrics.Processed++
-	p.metrics.mu.Unlock()
+	p.mu.Unlock()
 
+	p.mu.Lock()
 	p.events = append(p.events, current)
+	p.mu.Unlock()
+
 	klog.V(4).Infof("Processed event: %s for asset %s", event.Type, event.AssetID)
 	return nil
 }
