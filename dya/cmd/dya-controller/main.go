@@ -38,6 +38,8 @@ import (
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
+	"k8s.io/kubernetes/dya/pkg/ecosystem"
+	"k8s.io/kubernetes/dya/pkg/ecosystem/sdks"
 	"k8s.io/kubernetes/dya/pkg/edge"
 	"k8s.io/kubernetes/dya/pkg/edge/buffers"
 	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
@@ -103,7 +105,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 18: Developer Platform                              ║")
+	fmt.Println("║   Phase 19: Ecosystem / SDK                                 ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -476,7 +478,94 @@ func main() {
 	klog.Info("Developer Engine started successfully")
 
 	// ============================================
-	// 15. CREATE ASSET GRAPH CONTROLLER
+	// 15. CREATE ECOSYSTEM ENGINE
+	// ============================================
+	klog.Info("Creating Ecosystem Engine...")
+	ecosystemEngine := ecosystem.NewEngine()
+
+	klog.Info("Registering Ecosystem components...")
+	// Register official SDKs
+	officialSDKs := sdks.GetOfficialSDKs()
+	for _, sdk := range officialSDKs {
+		if s, ok := sdk.(ecosystem.SDK); ok {
+			ecosystemEngine.RegisterSDK(s)
+		}
+	}
+
+	// Register sample plugins
+	ecosystemEngine.RegisterPlugin(ecosystem.Plugin{
+		ID:          "plugin-kafka",
+		Name:        "Kafka Integration",
+		Type:        "integration",
+		Author:      "DYALEMCHIRZ Team",
+		Version:     "1.0.0",
+		Repository:  "https://github.com/kryntelxf/dya-plugin-kafka",
+		Downloads:   1500,
+		Rating:      4.8,
+		CreatedAt:   time.Now(),
+	})
+
+	ecosystemEngine.RegisterPlugin(ecosystem.Plugin{
+		ID:          "plugin-prometheus",
+		Name:        "Prometheus Integration",
+		Type:        "monitoring",
+		Author:      "DYALEMCHIRZ Team",
+		Version:     "1.0.0",
+		Repository:  "https://github.com/kryntelxf/dya-plugin-prometheus",
+		Downloads:   2300,
+		Rating:      4.9,
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample integration
+	ecosystemEngine.RegisterIntegration(ecosystem.Integration{
+		ID:          "integration-aws",
+		Name:        "AWS Cloud Integration",
+		Partner:     "Amazon Web Services",
+		Type:        "cloud",
+		Description: "Integration with AWS services",
+		Documentation: "https://docs.dyalemchirz.com/integrations/aws",
+		Status:      "stable",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample example
+	ecosystemEngine.RegisterExample(ecosystem.Example{
+		ID:          "example-go",
+		Name:        "Go Microservice Example",
+		Language:    "go",
+		Path:        "/examples/go-microservice",
+		Description: "Example of a Go microservice with DYALEMCHIRZ",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample guide
+	ecosystemEngine.RegisterGuide(ecosystem.Guide{
+		ID:          "guide-getting-started",
+		Title:       "Getting Started Guide",
+		Category:    "getting-started",
+		Path:        "/guides/getting-started",
+		Description: "How to get started with DYALEMCHIRZ",
+		UpdatedAt:   time.Now(),
+	})
+
+	// Register sample partner
+	ecosystemEngine.RegisterPartner(ecosystem.Partner{
+		ID:          "partner-google",
+		Name:        "Google Cloud",
+		Website:     "https://cloud.google.com",
+		Description: "Google Cloud Platform integration partner",
+		Status:      "active",
+		CreatedAt:   time.Now(),
+	})
+
+	klog.Info("Starting Ecosystem Engine...")
+	ecosystemEngine.Start()
+	defer ecosystemEngine.Stop()
+	klog.Info("Ecosystem Engine started successfully")
+
+	// ============================================
+	// 16. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -495,7 +584,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 16. ALL COMPONENTS STARTED
+	// 17. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -516,6 +605,7 @@ func main() {
 	klog.Info("║  ✅ Multi-Tenant Engine (tenant isolation, quotas, policies) ║")
 	klog.Info("║  ✅ Global Edge Engine (global clusters, regions, routing)   ║")
 	klog.Info("║  ✅ Developer Engine (SDK, plugins, templates, tools, docs)  ║")
+	klog.Info("║  ✅ Ecosystem Engine (SDKs, plugins, integrations, partners) ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
