@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"sync"
 
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 )
 
@@ -38,7 +37,7 @@ type Node struct {
 type Edge struct {
 	Source      string `json:"source"`
 	Target      string `json:"target"`
-	Type        string `json:"type"` // depends-on, owned-by, member-of
+	Type        string `json:"type"`
 	Description string `json:"description,omitempty"`
 }
 
@@ -46,7 +45,7 @@ type Edge struct {
 type Graph struct {
 	mu    sync.RWMutex
 	nodes map[string]*Node
-	edges map[string][]*Edge // source -> edges
+	edges map[string][]*Edge
 }
 
 // NewGraph creates a new empty graph
@@ -62,6 +61,9 @@ func (g *Graph) AddNode(node *Node) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
+	if node == nil {
+		return fmt.Errorf("node is nil")
+	}
 	if node.ID == "" {
 		return fmt.Errorf("node ID cannot be empty")
 	}
@@ -84,6 +86,9 @@ func (g *Graph) UpdateNode(node *Node) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
+	if node == nil {
+		return fmt.Errorf("node is nil")
+	}
 	if _, ok := g.nodes[node.ID]; !ok {
 		return fmt.Errorf("node %s not found", node.ID)
 	}
