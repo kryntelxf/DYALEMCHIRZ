@@ -22,10 +22,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
@@ -52,7 +51,6 @@ type Controller struct {
 	informerFactory     informers.SharedInformerFactory
 	reconciliationCount int64
 	reconciliationErrors int64
-	health              atomic.Bool
 }
 
 // NewController creates a new controller
@@ -83,7 +81,6 @@ func NewController(config *rest.Config) (*Controller, error) {
 
 	// Register event handlers
 	ctrl.registerEventHandlers()
-	ctrl.health.Store(true)
 
 	return ctrl, nil
 }
@@ -188,14 +185,10 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 
 // reconcile reconciles an asset
 func (c *Controller) reconcile(ctx context.Context, key string) error {
-	// Parse key (namespace/name)
 	_, _, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return fmt.Errorf("invalid key: %s", key)
 	}
-
-	// In production, this would reconcile the asset
-	// For Stage 1, we just log and return success
 	klog.V(4).Infof("Reconciling: %s", key)
 	return nil
 }
@@ -210,49 +203,32 @@ func (c *Controller) updateMetricsLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			// Update graph metrics
 			nodes, edges := c.graph.Count()
 			metrics.SetGraphMetrics(float64(nodes), float64(edges))
-
-			// Update reconciliation metrics
-			metrics.SetReconciliationMetrics(float64(atomic.LoadInt64(&c.reconciliationCount)),
-				float64(atomic.LoadInt64(&c.reconciliationErrors)))
-
-			// Update event metrics
+			metrics.SetReconciliationMetrics(
+				float64(atomic.LoadInt64(&c.reconciliationCount)),
+				float64(atomic.LoadInt64(&c.reconciliationErrors)),
+			)
 			eventMetrics := c.pipeline.GetMetrics()
-			metrics.SetEventMetrics(float64(eventMetrics.Total),
+			metrics.SetEventMetrics(
+				float64(eventMetrics.Total),
 				float64(eventMetrics.Processed),
-				float64(eventMetrics.Failed))
+				float64(eventMetrics.Failed),
+			)
 		}
 	}
-}
-
-// Health returns the health status
-func (c *Controller) Health() bool {
-	return c.health.Load()
-}
-
-// GetGraph returns the asset graph
-func (c *Controller) GetGraph() *graph.Graph {
-	return c.graph
-}
-
-// GetPipeline returns the event pipeline
-func (c *Controller) GetPipeline() *event.Pipeline {
-	return c.pipeline
 }
 
 // --- Event Handlers ---
 
 func (c *Controller) handlePodAdd(obj interface{}) {
-	pod, ok := obj.(*corev1.Pod)
+	pod, ok := obj.(*v1.Pod)
 	if !ok {
 		return
 	}
 	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
-	c.enqueue(key)
+	c.workqueue.Add(key)
 
-	// Create event
 	evt := &event.Event{
 		ID:        fmt.Sprintf("pod-add-%s-%d", key, time.Now().UnixNano()),
 		Source:    "kubernetes",
@@ -260,39 +236,33 @@ func (c *Controller) handlePodAdd(obj interface{}) {
 		AssetID:   fmt.Sprintf("pod/%s", key),
 		Timestamp: time.Now(),
 		Data: map[string]interface{}{
-			"pod": pod.Name,
+			"pod":       pod.Name,
 			"namespace": pod.Namespace,
-			"node": pod.Spec.NodeName,
+			"node":      pod.Spec.NodeName,
 		},
 	}
-	if err := c.pipeline.Process(context.Background(), evt); err != nil {
-		klog.Errorf("Failed to process pod add event: %v", err)
-	}
+	_ = c.pipeline.Process(context.Background(), evt)
 }
 
 func (c *Controller) handlePodUpdate(old, new interface{}) {
-	pod, ok := new.(*corev1.Pod)
+	pod, ok := new.(*v1.Pod)
 	if !ok {
 		return
 	}
 	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
-	c.enqueue(key)
+	c.workqueue.Add(key)
 }
 
 func (c *Controller) handlePodDelete(obj interface{}) {
-	pod, ok := obj.(*corev1.Pod)
+	pod, ok := obj.(*v1.Pod)
 	if !ok {
 		return
 	}
 	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
 	assetID := fmt.Sprintf("pod/%s", key)
 
-	// Remove from graph
-	if err := c.graph.RemoveNode(assetID); err != nil {
-		klog.V(4).Infof("Failed to remove pod %s from graph: %v", key, err)
-	}
+	_ = c.graph.RemoveNode(assetID)
 
-	// Create event
 	evt := &event.Event{
 		ID:        fmt.Sprintf("pod-delete-%s-%d", key, time.Now().UnixNano()),
 		Source:    "kubernetes",
@@ -300,69 +270,59 @@ func (c *Controller) handlePodDelete(obj interface{}) {
 		AssetID:   assetID,
 		Timestamp: time.Now(),
 		Data: map[string]interface{}{
-			"pod": pod.Name,
+			"pod":       pod.Name,
 			"namespace": pod.Namespace,
 		},
 	}
-	if err := c.pipeline.Process(context.Background(), evt); err != nil {
-		klog.Errorf("Failed to process pod delete event: %v", err)
-	}
+	_ = c.pipeline.Process(context.Background(), evt)
 }
 
 func (c *Controller) handleNodeAdd(obj interface{}) {
-	node, ok := obj.(*corev1.Node)
+	node, ok := obj.(*v1.Node)
 	if !ok {
 		return
 	}
-	c.enqueue(node.Name)
+	c.workqueue.Add(node.Name)
 }
 
 func (c *Controller) handleNodeUpdate(old, new interface{}) {
-	node, ok := new.(*corev1.Node)
+	node, ok := new.(*v1.Node)
 	if !ok {
 		return
 	}
-	c.enqueue(node.Name)
+	c.workqueue.Add(node.Name)
 }
 
 func (c *Controller) handleNodeDelete(obj interface{}) {
-	node, ok := obj.(*corev1.Node)
+	node, ok := obj.(*v1.Node)
 	if !ok {
 		return
 	}
-	if err := c.graph.RemoveNode(fmt.Sprintf("node/%s", node.Name)); err != nil {
-		klog.V(4).Infof("Failed to remove node %s from graph: %v", node.Name, err)
-	}
+	_ = c.graph.RemoveNode(fmt.Sprintf("node/%s", node.Name))
 }
 
 func (c *Controller) handleServiceAdd(obj interface{}) {
-	svc, ok := obj.(*corev1.Service)
+	svc, ok := obj.(*v1.Service)
 	if !ok {
 		return
 	}
 	key := fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)
-	c.enqueue(key)
+	c.workqueue.Add(key)
 }
 
 func (c *Controller) handleServiceUpdate(old, new interface{}) {
-	svc, ok := new.(*corev1.Service)
+	svc, ok := new.(*v1.Service)
 	if !ok {
 		return
 	}
 	key := fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)
-	c.enqueue(key)
+	c.workqueue.Add(key)
 }
 
 func (c *Controller) handleServiceDelete(obj interface{}) {
-	svc, ok := obj.(*corev1.Service)
+	svc, ok := obj.(*v1.Service)
 	if !ok {
 		return
 	}
-	if err := c.graph.RemoveNode(fmt.Sprintf("service/%s/%s", svc.Namespace, svc.Name)); err != nil {
-		klog.V(4).Infof("Failed to remove service %s/%s from graph: %v", svc.Namespace, svc.Name, err)
-	}
-}
-
-func (c *Controller) enqueue(key string) {
-	c.workqueue.Add(key)
+	_ = c.graph.RemoveNode(fmt.Sprintf("service/%s/%s", svc.Namespace, svc.Name))
 }
