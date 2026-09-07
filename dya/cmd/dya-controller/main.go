@@ -40,11 +40,11 @@ import (
 	"k8s.io/kubernetes/dya/pkg/edge"
 	"k8s.io/kubernetes/dya/pkg/edge/buffers"
 	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
-	"k8s.io/kubernetes/dya/pkg/edge/handlers"
+	edgehandlers "k8s.io/kubernetes/dya/pkg/edge/handlers"
 	"k8s.io/kubernetes/dya/pkg/edge/syncers"
 	"k8s.io/kubernetes/dya/pkg/enterprise"
 	"k8s.io/kubernetes/dya/pkg/enterprise/auditors"
-	"k8s.io/kubernetes/dya/pkg/enterprise/handlers"
+	enterprisehandlers "k8s.io/kubernetes/dya/pkg/enterprise/handlers"
 	"k8s.io/kubernetes/dya/pkg/knowledge"
 	knowledgeanalyzers "k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
 	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
@@ -192,7 +192,7 @@ func main() {
 	edgeEngine := edge.NewEngine()
 
 	klog.Info("Registering Edge components...")
-	edgeEngine.RegisterHandler(&handlers.LocalHandler{})
+	edgeEngine.RegisterHandler(&edgehandlers.LocalHandler{})
 	edgeEngine.RegisterSyncer(&syncers.Syncer{})
 	edgeEngine.RegisterEnforcer(&edgeenforcers.LocalEnforcer{})
 	edgeEngine.RegisterBuffer(buffers.NewBuffer())
@@ -291,7 +291,7 @@ func main() {
 
 	klog.Info("Registering Enterprise components...")
 	enterpriseEngine.RegisterAuditor(&auditors.EnterpriseAuditor{})
-	enterpriseEngine.RegisterAPIHandler(&handlers.APIHandler{})
+	enterpriseEngine.RegisterAPIHandler(&enterprisehandlers.APIHandler{})
 
 	// Register sample tenant, role, organization
 	enterpriseEngine.RegisterTenant(enterprise.Tenant{
