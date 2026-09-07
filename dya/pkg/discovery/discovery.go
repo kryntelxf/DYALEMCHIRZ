@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -57,10 +57,10 @@ func (d *Discoverer) DiscoverNodes(ctx context.Context) error {
 			Kind:  "Node",
 			Labels: node.Labels,
 			Properties: map[string]string{
-				"status":      string(getNodeStatus(&node)),
+				"status":          string(getNodeStatus(&node)),
 				"kubeletVersion": node.Status.NodeInfo.KubeletVersion,
-				"os":          node.Status.NodeInfo.OperatingSystem,
-				"architecture": node.Status.NodeInfo.Architecture,
+				"os":              node.Status.NodeInfo.OperatingSystem,
+				"architecture":    node.Status.NodeInfo.Architecture,
 			},
 		}
 
@@ -130,9 +130,9 @@ func (d *Discoverer) DiscoverServices(ctx context.Context) error {
 			Kind:      "Service",
 			Labels:    svc.Labels,
 			Properties: map[string]string{
-				"type":       string(svc.Spec.Type),
-				"clusterIP":  svc.Spec.ClusterIP,
-				"created":    svc.CreationTimestamp.Format("2006-01-02T15:04:05Z"),
+				"type":      string(svc.Spec.Type),
+				"clusterIP": svc.Spec.ClusterIP,
+				"created":   svc.CreationTimestamp.Format("2006-01-02T15:04:05Z"),
 			},
 		}
 
@@ -159,11 +159,11 @@ func (d *Discoverer) DiscoverAll(ctx context.Context) error {
 	return nil
 }
 
-func getNodeStatus(node *corev1.Node) corev1.ConditionStatus {
+func getNodeStatus(node *v1.Node) v1.ConditionStatus {
 	for _, cond := range node.Status.Conditions {
-		if cond.Type == corev1.NodeReady {
+		if cond.Type == v1.NodeReady {
 			return cond.Status
 		}
 	}
-	return corev1.ConditionUnknown
+	return v1.ConditionUnknown
 }
