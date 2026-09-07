@@ -19,301 +19,350 @@ package assetgraph
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+
+	"k8s.io/kubernetes/dya/pkg/discovery"
+	"k8s.io/kubernetes/dya/pkg/event"
+	"k8s.io/kubernetes/dya/pkg/graph"
+	"k8s.io/kubernetes/dya/pkg/metrics"
 )
 
-var (
-	assetGVR = schema.GroupVersionResource{
-		Group:    "dya.kryntelxf.com",
-		Version:  "v1alpha1",
-		Resource: "assets",
-	}
-)
-
-// Controller is the controller for Asset Graph
+// Controller is the asset graph controller
 type Controller struct {
-	// kubeClient is the Kubernetes clientset
-	kubeClient kubernetes.Interface
-
-	// dynamicClient is the dynamic clientset for CRD resources
-	dynamicClient dynamic.Interface
-
-	// assetInformer is the informer for Asset resources
-	assetInformer cache.SharedIndexInformer
-
-	// coreInformerFactory is the informer factory for core resources
-	coreInformerFactory informers.SharedInformerFactory
-
-	// workqueue is a rate limited work queue
-	workqueue workqueue.RateLimitingInterface
+	kubeClient          kubernetes.Interface
+	dynamicClient       dynamic.Interface
+	graph               *graph.Graph
+	discoverer          *discovery.Discoverer
+	pipeline            *event.Pipeline
+	workqueue           workqueue.RateLimitingInterface
+	informerFactory     informers.SharedInformerFactory
+	reconciliationCount int64
+	reconciliationErrors int64
+	health              atomic.Bool
 }
 
-// NewController returns a new Asset Graph controller
+// NewController creates a new controller
 func NewController(config *rest.Config) (*Controller, error) {
-	// Create Kubernetes clientset
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create kubernetes clientset: %v", err)
+		return nil, fmt.Errorf("failed to create kubernetes clientset: %w", err)
 	}
 
-	// Create dynamic clientset
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create dynamic clientset: %v", err)
+		return nil, fmt.Errorf("failed to create dynamic clientset: %w", err)
 	}
 
-	// Create dynamic informer factory
-	dynamicFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, time.Second*30)
+	g := graph.NewGraph()
+	discoverer := discovery.NewDiscoverer(kubeClient, g)
+	pipeline := event.NewPipeline()
 
-	// Get Asset informer
-	assetInformer := dynamicFactory.ForResource(assetGVR).Informer()
-
-	// Create core informer factory
-	coreInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*30)
-
-	// Create workqueue
-	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-
-	controller := &Controller{
-		kubeClient:          kubeClient,
-		dynamicClient:       dynamicClient,
-		assetInformer:       assetInformer,
-		coreInformerFactory: coreInformerFactory,
-		workqueue:           queue,
+	ctrl := &Controller{
+		kubeClient:      kubeClient,
+		dynamicClient:   dynamicClient,
+		graph:           g,
+		discoverer:      discoverer,
+		pipeline:        pipeline,
+		workqueue:       workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		informerFactory: informers.NewSharedInformerFactory(kubeClient, 30*time.Second),
 	}
 
-	// Set up event handlers for Asset resources
-	assetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueueAsset,
-		UpdateFunc: func(old, new interface{}) {
-			controller.enqueueAsset(new)
-		},
-		DeleteFunc: controller.enqueueAsset,
-	})
+	// Register event handlers
+	ctrl.registerEventHandlers()
+	ctrl.health.Store(true)
 
-	// Set up event handlers for Pods
-	podInformer := coreInformerFactory.Core().V1().Pods()
+	return ctrl, nil
+}
+
+// registerEventHandlers registers Kubernetes event handlers
+func (c *Controller) registerEventHandlers() {
+	// Watch Pods
+	podInformer := c.informerFactory.Core().V1().Pods()
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.handlePod,
-		UpdateFunc: func(old, new interface{}) { controller.handlePod(new) },
-		DeleteFunc: controller.handlePodDelete,
+		AddFunc:    c.handlePodAdd,
+		UpdateFunc: c.handlePodUpdate,
+		DeleteFunc: c.handlePodDelete,
 	})
 
-	// Set up event handlers for Services
-	serviceInformer := coreInformerFactory.Core().V1().Services()
-	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.handleService,
-		UpdateFunc: func(old, new interface{}) { controller.handleService(new) },
-		DeleteFunc: controller.handleServiceDelete,
-	})
-
-	// Set up event handlers for Nodes
-	nodeInformer := coreInformerFactory.Core().V1().Nodes()
+	// Watch Nodes
+	nodeInformer := c.informerFactory.Core().V1().Nodes()
 	nodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.handleNode,
-		UpdateFunc: func(old, new interface{}) { controller.handleNode(new) },
-		DeleteFunc: controller.handleNodeDelete,
+		AddFunc:    c.handleNodeAdd,
+		UpdateFunc: c.handleNodeUpdate,
+		DeleteFunc: c.handleNodeDelete,
 	})
 
-	return controller, nil
+	// Watch Services
+	serviceInformer := c.informerFactory.Core().V1().Services()
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    c.handleServiceAdd,
+		UpdateFunc: c.handleServiceUpdate,
+		DeleteFunc: c.handleServiceDelete,
+	})
 }
 
 // Run starts the controller
 func (c *Controller) Run(ctx context.Context, workers int) error {
-	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 
 	klog.Info("Starting Asset Graph controller")
 
-	// Start informer factories
-	c.coreInformerFactory.Start(ctx.Done())
-	c.assetInformer.GetController().Run(ctx.Done())
-
-	// Wait for informer caches to sync
-	klog.Info("Waiting for informer caches to sync...")
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.assetInformer.HasSynced); !ok {
-		return fmt.Errorf("failed to wait for caches to sync")
+	// Initial discovery
+	klog.Info("Running initial asset discovery...")
+	if err := c.discoverer.DiscoverAll(ctx); err != nil {
+		klog.Errorf("Initial discovery failed: %v", err)
 	}
-	if ok := cache.WaitForCacheSync(ctx.Done(),
-		c.coreInformerFactory.Core().V1().Pods().Informer().HasSynced,
-		c.coreInformerFactory.Core().V1().Services().Informer().HasSynced,
-		c.coreInformerFactory.Core().V1().Nodes().Informer().HasSynced,
-	); !ok {
-		return fmt.Errorf("failed to wait for core caches to sync")
-	}
-	klog.Info("Informer caches synced")
 
-	klog.Infof("Starting %d workers", workers)
+	// Start informers
+	c.informerFactory.Start(ctx.Done())
+
+	// Wait for cache sync
+	if !cache.WaitForCacheSync(ctx.Done(),
+		c.informerFactory.Core().V1().Pods().Informer().HasSynced,
+		c.informerFactory.Core().V1().Nodes().Informer().HasSynced,
+		c.informerFactory.Core().V1().Services().Informer().HasSynced,
+	) {
+		return fmt.Errorf("failed to sync informer caches")
+	}
+
+	klog.Info("Informers synced")
+
+	// Start workers
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
 
-	klog.Info("Started workers")
+	// Update metrics periodically
+	go c.updateMetricsLoop(ctx)
+
+	klog.Infof("Started %d workers", workers)
 	<-ctx.Done()
 	klog.Info("Shutting down workers")
 
 	return nil
 }
 
-// runWorker is the worker function
+// runWorker processes work items
 func (c *Controller) runWorker(ctx context.Context) {
 	for c.processNextWorkItem(ctx) {
 	}
 }
 
-// processNextWorkItem processes a work item from the queue
 func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
 	}
+	defer c.workqueue.Done(obj)
 
-	err := func(obj interface{}) error {
-		defer c.workqueue.Done(obj)
-
-		var key string
-		var ok bool
-		if key, ok = obj.(string); !ok {
-			c.workqueue.Forget(obj)
-			utilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
-			return nil
-		}
-
-		if err := c.reconcile(ctx, key); err != nil {
-			c.workqueue.AddRateLimited(key)
-			return fmt.Errorf("error syncing '%s': %s, requeuing", key, err.Error())
-		}
-
+	key, ok := obj.(string)
+	if !ok {
 		c.workqueue.Forget(obj)
-		klog.V(4).Infof("Successfully synced '%s'", key)
-		return nil
-	}(obj)
-
-	if err != nil {
-		utilruntime.HandleError(err)
 		return true
 	}
 
+	if err := c.reconcile(ctx, key); err != nil {
+		c.workqueue.AddRateLimited(key)
+		atomic.AddInt64(&c.reconciliationErrors, 1)
+		return true
+	}
+
+	c.workqueue.Forget(obj)
+	atomic.AddInt64(&c.reconciliationCount, 1)
 	return true
 }
 
-// reconcile reconciles the Asset
+// reconcile reconciles an asset
 func (c *Controller) reconcile(ctx context.Context, key string) error {
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	// Parse key (namespace/name)
+	_, _, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-		return nil
+		return fmt.Errorf("invalid key: %s", key)
 	}
 
-	// Get the Asset from informer cache
-	obj, exists, err := c.assetInformer.GetStore().GetByKey(key)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		klog.V(4).Infof("Asset %s/%s has been deleted", namespace, name)
-		return nil
-	}
-
-	asset, ok := obj.(*unstructured.Unstructured)
-	if !ok {
-		return fmt.Errorf("object is not an unstructured: %v", obj)
-	}
-
-	klog.V(4).Infof("Reconciling Asset %s/%s", namespace, name)
-
-	// Update status
-	if err := c.updateAssetStatus(ctx, namespace, name, asset); err != nil {
-		return err
-	}
-
+	// In production, this would reconcile the asset
+	// For Stage 1, we just log and return success
+	klog.V(4).Infof("Reconciling: %s", key)
 	return nil
 }
 
-// updateAssetStatus updates the status of an Asset
-func (c *Controller) updateAssetStatus(ctx context.Context, namespace, name string, asset *unstructured.Unstructured) error {
-	// Get the current asset from API (not cache)
-	currentAsset, err := c.dynamicClient.Resource(assetGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			klog.V(4).Infof("Asset %s/%s not found", namespace, name)
-			return nil
+// updateMetricsLoop updates metrics periodically
+func (c *Controller) updateMetricsLoop(ctx context.Context) {
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Update graph metrics
+			nodes, edges := c.graph.Count()
+			metrics.SetGraphMetrics(float64(nodes), float64(edges))
+
+			// Update reconciliation metrics
+			metrics.SetReconciliationMetrics(float64(atomic.LoadInt64(&c.reconciliationCount)),
+				float64(atomic.LoadInt64(&c.reconciliationErrors)))
+
+			// Update event metrics
+			eventMetrics := c.pipeline.GetMetrics()
+			metrics.SetEventMetrics(float64(eventMetrics.Total),
+				float64(eventMetrics.Processed),
+				float64(eventMetrics.Failed))
 		}
-		return fmt.Errorf("failed to get asset: %v", err)
 	}
-
-	// Update status
-	status := map[string]interface{}{
-		"observedGeneration": asset.GetGeneration(),
-		"lastSync":           metav1.Now().Format(time.RFC3339),
-	}
-
-	if err := unstructured.SetNestedField(currentAsset.Object, status, "status"); err != nil {
-		return fmt.Errorf("failed to set status: %v", err)
-	}
-
-	_, err = c.dynamicClient.Resource(assetGVR).Namespace(namespace).UpdateStatus(ctx, currentAsset, metav1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to update status: %v", err)
-	}
-
-	klog.V(4).Infof("Updated status for Asset %s/%s", namespace, name)
-	return nil
 }
 
-// enqueueAsset adds an Asset to the workqueue
-func (c *Controller) enqueueAsset(obj interface{}) {
-	var key string
-	var err error
-	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		utilruntime.HandleError(err)
+// Health returns the health status
+func (c *Controller) Health() bool {
+	return c.health.Load()
+}
+
+// GetGraph returns the asset graph
+func (c *Controller) GetGraph() *graph.Graph {
+	return c.graph
+}
+
+// GetPipeline returns the event pipeline
+func (c *Controller) GetPipeline() *event.Pipeline {
+	return c.pipeline
+}
+
+// --- Event Handlers ---
+
+func (c *Controller) handlePodAdd(obj interface{}) {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
 		return
 	}
-	c.workqueue.Add(key)
+	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+	c.enqueue(key)
+
+	// Create event
+	evt := &event.Event{
+		ID:        fmt.Sprintf("pod-add-%s-%d", key, time.Now().UnixNano()),
+		Source:    "kubernetes",
+		Type:      "create",
+		AssetID:   fmt.Sprintf("pod/%s", key),
+		Timestamp: time.Now(),
+		Data: map[string]interface{}{
+			"pod": pod.Name,
+			"namespace": pod.Namespace,
+			"node": pod.Spec.NodeName,
+		},
+	}
+	if err := c.pipeline.Process(context.Background(), evt); err != nil {
+		klog.Errorf("Failed to process pod add event: %v", err)
+	}
 }
 
-// ==================== DELETE HANDLERS ====================
+func (c *Controller) handlePodUpdate(old, new interface{}) {
+	pod, ok := new.(*corev1.Pod)
+	if !ok {
+		return
+	}
+	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+	c.enqueue(key)
+}
 
-// handlePodDelete handles Pod deletion
 func (c *Controller) handlePodDelete(obj interface{}) {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		return
 	}
-	klog.V(4).Infof("Pod deleted: %s/%s", pod.Namespace, pod.Name)
-	// Optionally delete the Asset or mark as deleted
+	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+	assetID := fmt.Sprintf("pod/%s", key)
+
+	// Remove from graph
+	if err := c.graph.RemoveNode(assetID); err != nil {
+		klog.V(4).Infof("Failed to remove pod %s from graph: %v", key, err)
+	}
+
+	// Create event
+	evt := &event.Event{
+		ID:        fmt.Sprintf("pod-delete-%s-%d", key, time.Now().UnixNano()),
+		Source:    "kubernetes",
+		Type:      "delete",
+		AssetID:   assetID,
+		Timestamp: time.Now(),
+		Data: map[string]interface{}{
+			"pod": pod.Name,
+			"namespace": pod.Namespace,
+		},
+	}
+	if err := c.pipeline.Process(context.Background(), evt); err != nil {
+		klog.Errorf("Failed to process pod delete event: %v", err)
+	}
 }
 
-// handleServiceDelete handles Service deletion
-func (c *Controller) handleServiceDelete(obj interface{}) {
-	service, ok := obj.(*corev1.Service)
+func (c *Controller) handleNodeAdd(obj interface{}) {
+	node, ok := obj.(*corev1.Node)
 	if !ok {
 		return
 	}
-	klog.V(4).Infof("Service deleted: %s/%s", service.Namespace, service.Name)
+	c.enqueue(node.Name)
 }
 
-// handleNodeDelete handles Node deletion
+func (c *Controller) handleNodeUpdate(old, new interface{}) {
+	node, ok := new.(*corev1.Node)
+	if !ok {
+		return
+	}
+	c.enqueue(node.Name)
+}
+
 func (c *Controller) handleNodeDelete(obj interface{}) {
 	node, ok := obj.(*corev1.Node)
 	if !ok {
 		return
 	}
-	klog.V(4).Infof("Node deleted: %s", node.Name)
+	if err := c.graph.RemoveNode(fmt.Sprintf("node/%s", node.Name)); err != nil {
+		klog.V(4).Infof("Failed to remove node %s from graph: %v", node.Name, err)
+	}
+}
+
+func (c *Controller) handleServiceAdd(obj interface{}) {
+	svc, ok := obj.(*corev1.Service)
+	if !ok {
+		return
+	}
+	key := fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)
+	c.enqueue(key)
+}
+
+func (c *Controller) handleServiceUpdate(old, new interface{}) {
+	svc, ok := new.(*corev1.Service)
+	if !ok {
+		return
+	}
+	key := fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)
+	c.enqueue(key)
+}
+
+func (c *Controller) handleServiceDelete(obj interface{}) {
+	svc, ok := obj.(*corev1.Service)
+	if !ok {
+		return
+	}
+	if err := c.graph.RemoveNode(fmt.Sprintf("service/%s/%s", svc.Namespace, svc.Name)); err != nil {
+		klog.V(4).Infof("Failed to remove service %s/%s from graph: %v", svc.Namespace, svc.Name, err)
+	}
+}
+
+func (c *Controller) enqueue(key string) {
+	c.workqueue.Add(key)
 }
