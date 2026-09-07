@@ -49,6 +49,8 @@ import (
 	knowledgeanalyzers "k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
 	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
 	"k8s.io/kubernetes/dya/pkg/knowledge/queriers"
+	"k8s.io/kubernetes/dya/pkg/multitenant"
+	"k8s.io/kubernetes/dya/pkg/multitenant/validators"
 	"k8s.io/kubernetes/dya/pkg/policy"
 	policyauditors "k8s.io/kubernetes/dya/pkg/policy/auditors"
 	policyenforcers "k8s.io/kubernetes/dya/pkg/policy/enforcers"
@@ -97,7 +99,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 15: Enterprise Platform                             ║")
+	fmt.Println("║   Phase 16: Multi-Tenancy                                   ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -323,7 +325,51 @@ func main() {
 	klog.Info("Enterprise Engine started successfully")
 
 	// ============================================
-	// 12. CREATE ASSET GRAPH CONTROLLER
+	// 12. CREATE MULTI-TENANT ENGINE
+	// ============================================
+	klog.Info("Creating Multi-Tenant Engine...")
+	multiTenantEngine := multitenant.NewEngine()
+
+	klog.Info("Registering Multi-Tenant components...")
+	multiTenantEngine.RegisterValidator(&validators.BasicValidator{})
+
+	// Register sample tenant
+	multiTenantEngine.RegisterTenant(multitenant.Tenant{
+		ID:          "tenant-1",
+		Name:        "Default Tenant",
+		Description: "Default multi-tenant tenant",
+		Namespace:   "default",
+		Status:      "active",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	})
+
+	// Register sample quota
+	multiTenantEngine.RegisterQuota(multitenant.Quota{
+		TenantID:  "tenant-1",
+		Resource:  "cpu",
+		Limit:     100,
+		Used:      25,
+		CreatedAt: time.Now(),
+	})
+
+	// Register sample policy
+	multiTenantEngine.RegisterPolicy(multitenant.Policy{
+		TenantID: "tenant-1",
+		Name:     "default-policy",
+		Rules: map[string]interface{}{
+			"allowAll": true,
+		},
+		CreatedAt: time.Now(),
+	})
+
+	klog.Info("Starting Multi-Tenant Engine...")
+	multiTenantEngine.Start()
+	defer multiTenantEngine.Stop()
+	klog.Info("Multi-Tenant Engine started successfully")
+
+	// ============================================
+	// 13. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -342,7 +388,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 13. ALL COMPONENTS STARTED
+	// 14. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -360,6 +406,7 @@ func main() {
 	klog.Info("║  ✅ Predictive Engine (failure prediction, forecasting)       ║")
 	klog.Info("║  ✅ Simulation Engine (large-scale simulation, validation)    ║")
 	klog.Info("║  ✅ Enterprise Engine (multi-tenancy, RBAC, API)             ║")
+	klog.Info("║  ✅ Multi-Tenant Engine (tenant isolation, quotas, policies) ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
