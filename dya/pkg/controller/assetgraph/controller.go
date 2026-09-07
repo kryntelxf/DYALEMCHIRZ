@@ -23,8 +23,6 @@ import (
 	"time"
 
 	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
@@ -79,15 +77,12 @@ func NewController(config *rest.Config) (*Controller, error) {
 		informerFactory: informers.NewSharedInformerFactory(kubeClient, 30*time.Second),
 	}
 
-	// Register event handlers
 	ctrl.registerEventHandlers()
 
 	return ctrl, nil
 }
 
-// registerEventHandlers registers Kubernetes event handlers
 func (c *Controller) registerEventHandlers() {
-	// Watch Pods
 	podInformer := c.informerFactory.Core().V1().Pods()
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handlePodAdd,
@@ -95,7 +90,6 @@ func (c *Controller) registerEventHandlers() {
 		DeleteFunc: c.handlePodDelete,
 	})
 
-	// Watch Nodes
 	nodeInformer := c.informerFactory.Core().V1().Nodes()
 	nodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleNodeAdd,
@@ -103,7 +97,6 @@ func (c *Controller) registerEventHandlers() {
 		DeleteFunc: c.handleNodeDelete,
 	})
 
-	// Watch Services
 	serviceInformer := c.informerFactory.Core().V1().Services()
 	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleServiceAdd,
@@ -118,16 +111,13 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 
 	klog.Info("Starting Asset Graph controller")
 
-	// Initial discovery
 	klog.Info("Running initial asset discovery...")
 	if err := c.discoverer.DiscoverAll(ctx); err != nil {
 		klog.Errorf("Initial discovery failed: %v", err)
 	}
 
-	// Start informers
 	c.informerFactory.Start(ctx.Done())
 
-	// Wait for cache sync
 	if !cache.WaitForCacheSync(ctx.Done(),
 		c.informerFactory.Core().V1().Pods().Informer().HasSynced,
 		c.informerFactory.Core().V1().Nodes().Informer().HasSynced,
@@ -138,12 +128,10 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 
 	klog.Info("Informers synced")
 
-	// Start workers
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
 
-	// Update metrics periodically
 	go c.updateMetricsLoop(ctx)
 
 	klog.Infof("Started %d workers", workers)
@@ -153,7 +141,6 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
-// runWorker processes work items
 func (c *Controller) runWorker(ctx context.Context) {
 	for c.processNextWorkItem(ctx) {
 	}
@@ -183,7 +170,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-// reconcile reconciles an asset
 func (c *Controller) reconcile(ctx context.Context, key string) error {
 	_, _, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -193,7 +179,6 @@ func (c *Controller) reconcile(ctx context.Context, key string) error {
 	return nil
 }
 
-// updateMetricsLoop updates metrics periodically
 func (c *Controller) updateMetricsLoop(ctx context.Context) {
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
@@ -217,6 +202,16 @@ func (c *Controller) updateMetricsLoop(ctx context.Context) {
 			)
 		}
 	}
+}
+
+// GetGraph returns the asset graph
+func (c *Controller) GetGraph() *graph.Graph {
+	return c.graph
+}
+
+// GetPipeline returns the event pipeline
+func (c *Controller) GetPipeline() *event.Pipeline {
+	return c.pipeline
 }
 
 // --- Event Handlers ---
