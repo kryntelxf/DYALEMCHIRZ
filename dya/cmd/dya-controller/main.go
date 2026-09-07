@@ -34,6 +34,7 @@ import (
 	aipredictors "k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
+	"k8s.io/kubernetes/dya/pkg/developer"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
@@ -102,7 +103,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Phase 17: Global Edge Architecture                        ║")
+	fmt.Println("║   Phase 18: Developer Platform                              ║")
 	fmt.Println("║   Version: 0.1.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -408,7 +409,74 @@ func main() {
 	klog.Info("Global Edge Engine started successfully")
 
 	// ============================================
-	// 14. CREATE ASSET GRAPH CONTROLLER
+	// 14. CREATE DEVELOPER ENGINE
+	// ============================================
+	klog.Info("Creating Developer Engine...")
+	developerEngine := developer.NewEngine()
+
+	klog.Info("Registering Developer components...")
+	developerEngine.RegisterSDK(developer.SDK{
+		ID:          "sdk-go",
+		Name:        "DYALEMCHIRZ Go SDK",
+		Version:     "1.0.0",
+		Language:    "go",
+		Repository:  "https://github.com/kryntelxf/dya-sdk-go",
+		Description: "Go SDK for DYALEMCHIRZ platform",
+		CreatedAt:   time.Now(),
+	})
+
+	developerEngine.RegisterSDK(developer.SDK{
+		ID:          "sdk-python",
+		Name:        "DYALEMCHIRZ Python SDK",
+		Version:     "1.0.0",
+		Language:    "python",
+		Repository:  "https://github.com/kryntelxf/dya-sdk-python",
+		Description: "Python SDK for DYALEMCHIRZ platform",
+		CreatedAt:   time.Now(),
+	})
+
+	developerEngine.RegisterPlugin(developer.Plugin{
+		ID:          "plugin-monitor",
+		Name:        "Monitor Plugin",
+		Version:     "1.0.0",
+		Type:        "monitoring",
+		Author:      "DYALEMCHIRZ Team",
+		Enabled:     true,
+		CreatedAt:   time.Now(),
+	})
+
+	developerEngine.RegisterTemplate(developer.Template{
+		ID:          "template-go",
+		Name:        "Go Service Template",
+		Type:        "service",
+		Path:        "/templates/go-service",
+		Description: "Template for Go microservices",
+		CreatedAt:   time.Now(),
+	})
+
+	developerEngine.RegisterTool(developer.Tool{
+		ID:          "tool-dya-cli",
+		Name:        "DYALEMCHIRZ CLI",
+		Command:     "dya",
+		Description: "Command line tool for DYALEMCHIRZ",
+		CreatedAt:   time.Now(),
+	})
+
+	developerEngine.RegisterDoc(developer.Doc{
+		ID:          "doc-api",
+		Title:       "API Reference",
+		Path:        "/docs/api",
+		Description: "Complete API reference documentation",
+		UpdatedAt:   time.Now(),
+	})
+
+	klog.Info("Starting Developer Engine...")
+	developerEngine.Start()
+	defer developerEngine.Stop()
+	klog.Info("Developer Engine started successfully")
+
+	// ============================================
+	// 15. CREATE ASSET GRAPH CONTROLLER
 	// ============================================
 	klog.Info("Creating Asset Graph controller...")
 	assetGraphController, err := assetgraph.NewController(cfg)
@@ -427,7 +495,7 @@ func main() {
 	}()
 
 	// ============================================
-	// 15. ALL COMPONENTS STARTED
+	// 16. ALL COMPONENTS STARTED
 	// ============================================
 	klog.Info("All components started successfully")
 	klog.Info("DYALEMCHIRZ is ready")
@@ -447,6 +515,7 @@ func main() {
 	klog.Info("║  ✅ Enterprise Engine (multi-tenancy, RBAC, API)             ║")
 	klog.Info("║  ✅ Multi-Tenant Engine (tenant isolation, quotas, policies) ║")
 	klog.Info("║  ✅ Global Edge Engine (global clusters, regions, routing)   ║")
+	klog.Info("║  ✅ Developer Engine (SDK, plugins, templates, tools, docs)  ║")
 	klog.Info("║  ✅ Asset Graph Controller                                   ║")
 	klog.Info("╚══════════════════════════════════════════════════════════════╝")
 	klog.Info("")
