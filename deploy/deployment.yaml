@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dya-controller
+  namespace: dya-system
+  labels:
+    app: dya-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dya-controller
+  template:
+    metadata:
+      labels:
+        app: dya-controller
+    spec:
+      serviceAccountName: dya-controller
+      containers:
+      - name: controller
+        image: dya-controller:latest
+        imagePullPolicy: IfNotPresent
+        args:
+        - --workers=2
+        - --health-port=8080
+        ports:
+        - containerPort: 8080
+          name: health
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
