@@ -35,12 +35,20 @@ type ImpactResult struct {
 	AssetID          string   `json:"assetId"`
 	DirectDependents []string `json:"directDependents"`
 	AllDependents    []string `json:"allDependents"`
-	ImpactLevel      string   `json:"impactLevel"` // low, medium, high, critical
+	ImpactLevel      string   `json:"impactLevel"`
 	AffectedCount    int      `json:"affectedCount"`
 }
 
 // Analyze analyzes the impact of an asset failure
 func (a *Analyzer) Analyze(assetID string) *ImpactResult {
+	if a.graph == nil {
+		return &ImpactResult{
+			AssetID:       assetID,
+			ImpactLevel:   "unknown",
+			AffectedCount: 0,
+		}
+	}
+
 	directDeps := a.graph.GetDependents(assetID)
 	allDeps := a.getAllDependents(assetID)
 
@@ -63,6 +71,9 @@ func (a *Analyzer) Analyze(assetID string) *ImpactResult {
 }
 
 func (a *Analyzer) getAllDependents(assetID string) []string {
+	if a.graph == nil {
+		return []string{}
+	}
 	visited := make(map[string]bool)
 	result := []string{}
 	a.collectDependents(assetID, visited, &result)
