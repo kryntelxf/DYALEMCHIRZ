@@ -22,11 +22,16 @@ import (
 )
 
 // SimplePredictor makes simple predictions
-type SimplePredictor struct{}
+type SimplePredictor struct {
+	// confidence threshold
+	confidence float64
+}
 
 // NewSimplePredictor creates a new simple predictor
 func NewSimplePredictor() *SimplePredictor {
-	return &SimplePredictor{}
+	return &SimplePredictor{
+		confidence: 85.0,
+	}
 }
 
 // Name returns the name of the predictor
@@ -45,7 +50,7 @@ func (p *SimplePredictor) Predict(data interface{}) (*ai.PredictionResult, error
 	}
 
 	klog.V(4).Info("SimplePredictor making prediction")
-	
+
 	return &ai.PredictionResult{
 		PredictedState: "stable",
 		Confidence:     85.0,
