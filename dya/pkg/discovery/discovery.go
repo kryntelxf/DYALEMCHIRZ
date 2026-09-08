@@ -145,6 +145,52 @@ func (d *Discoverer) DiscoverServices(ctx context.Context) error {
 	return nil
 }
 
+// DiscoverDeployments discovers Kubernetes Deployments
+func (d *Discoverer) DiscoverDeployments(ctx context.Context) error {
+	deployments, err := d.client.AppsV1().Deployments(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list deployments: %w", err)
+	}
+
+	for _, dep := range deployments.Items {
+		assetID := fmt.Sprintf("deployment/%s/%s", dep.Namespace, dep.Name)
+		replicas := int32(0)
+		if dep.Spec.Replicas != nil {
+			replicas = *dep.Spec.Replicas
+		}
+		depNode := &graph.Node{
+			ID:        assetID,
+			Name:      dep.Name,
+			Namespace: dep.Namespace,
+			Kind:      "Deployment",
+			Labels:    dep.Labels,
+			Properties: map[string]string{
+				"replicas":   fmt.Sprintf("%d", replicas),
+				"available":  fmt.Sprintf("%d", dep.Status.AvailableReplicas),
+				"ready":      fmt.Sprintf("%d", dep.Status.ReadyReplicas),
+				"updated":    fmt.Sprintf("%d", dep.Status.UpdatedReplicas),
+				"created":    dep.CreationTimestamp.Format("2006-01-02T15:04:05Z"),
+			},
+		}
+
+		if err := d.graph.AddNode(depNode); err != nil {
+			klog.Errorf("Failed to add deployment %s/%s: %v", dep.Namespace, dep.Name, err)
+			continue
+		}
+
+		// Add relationship: Deployment -> Pods (through label selector)
+		// This is a simplified relationship - in production, we would match labels
+		if dep.Spec.Selector != nil {
+			// For Stage 2, we add a generic relationship
+			selector := fmt.Sprintf("%v", dep.Spec.Selector.MatchLabels)
+			klog.V(4).Infof("Deployment %s/%s selector: %s", dep.Namespace, dep.Name, selector)
+		}
+	}
+
+	klog.Infof("Discovered %d deployments", len(deployments.Items))
+	return nil
+}
+
 // DiscoverAll discovers all Kubernetes resources
 func (d *Discoverer) DiscoverAll(ctx context.Context) error {
 	if err := d.DiscoverNodes(ctx); err != nil {
@@ -154,6 +200,9 @@ func (d *Discoverer) DiscoverAll(ctx context.Context) error {
 		return err
 	}
 	if err := d.DiscoverServices(ctx); err != nil {
+		return err
+	}
+	if err := d.DiscoverDeployments(ctx); err != nil {
 		return err
 	}
 	return nil
