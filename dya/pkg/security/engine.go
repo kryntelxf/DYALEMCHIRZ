@@ -24,47 +24,47 @@ import (
 )
 
 type Engine struct {
-	mu            sync.RWMutex
-	verifiers     []IdentityVerifier
-	enforcers     []PolicyEnforcer
-	auditors      []AuditLogger
-	detectors     []AnomalyDetector
-	running       bool
+	mu          sync.RWMutex
+	verifiers   []Verifier
+	enforcers   []Enforcer
+	auditors    []Auditor
+	detectors   []Detector
+	running     bool
 }
 
-type IdentityVerifier interface {
+type Verifier interface {
 	Verify(identity interface{}) (*VerificationResult, error)
 	Name() string
 }
 
-type PolicyEnforcer interface {
+type Enforcer interface {
 	Enforce(policy interface{}, context interface{}) (*EnforcementResult, error)
 	Name() string
 }
 
-type AuditLogger interface {
-	Log(event interface{}) error
+type Auditor interface {
+	Audit(event interface{}) error
 	Name() string
 }
 
-type AnomalyDetector interface {
+type Detector interface {
 	Detect(activity interface{}) (*SecurityAnomaly, error)
 	Name() string
 }
 
 type VerificationResult struct {
-	IdentityID  string    `json:"identityId"`
-	Valid       bool      `json:"valid"`
-	Reason      string    `json:"reason"`
-	Timestamp   time.Time `json:"timestamp"`
+	IdentityID string    `json:"identityId"`
+	Valid      bool      `json:"valid"`
+	Reason     string    `json:"reason"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 type EnforcementResult struct {
-	PolicyID    string    `json:"policyId"`
-	Action      string    `json:"action"`
-	Allowed     bool      `json:"allowed"`
-	Reason      string    `json:"reason"`
-	Timestamp   time.Time `json:"timestamp"`
+	PolicyID  string    `json:"policyId"`
+	Action    string    `json:"action"`
+	Allowed   bool      `json:"allowed"`
+	Reason    string    `json:"reason"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type SecurityAnomaly struct {
@@ -76,40 +76,40 @@ type SecurityAnomaly struct {
 
 func NewEngine() *Engine {
 	return &Engine{
-		verifiers: make([]IdentityVerifier, 0),
-		enforcers: make([]PolicyEnforcer, 0),
-		auditors:  make([]AuditLogger, 0),
-		detectors: make([]AnomalyDetector, 0),
+		verifiers: make([]Verifier, 0),
+		enforcers: make([]Enforcer, 0),
+		auditors:  make([]Auditor, 0),
+		detectors: make([]Detector, 0),
 		running:   false,
 	}
 }
 
-func (e *Engine) RegisterVerifier(verifier IdentityVerifier) {
+func (e *Engine) RegisterVerifier(verifier Verifier) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.verifiers = append(e.verifiers, verifier)
-	klog.Infof("Registered identity verifier: %s", verifier.Name())
+	klog.Infof("Registered verifier: %s", verifier.Name())
 }
 
-func (e *Engine) RegisterEnforcer(enforcer PolicyEnforcer) {
+func (e *Engine) RegisterEnforcer(enforcer Enforcer) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.enforcers = append(e.enforcers, enforcer)
-	klog.Infof("Registered policy enforcer: %s", enforcer.Name())
+	klog.Infof("Registered enforcer: %s", enforcer.Name())
 }
 
-func (e *Engine) RegisterAuditor(auditor AuditLogger) {
+func (e *Engine) RegisterAuditor(auditor Auditor) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.auditors = append(e.auditors, auditor)
-	klog.Infof("Registered audit logger: %s", auditor.Name())
+	klog.Infof("Registered auditor: %s", auditor.Name())
 }
 
-func (e *Engine) RegisterDetector(detector AnomalyDetector) {
+func (e *Engine) RegisterDetector(detector Detector) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.detectors = append(e.detectors, detector)
-	klog.Infof("Registered security detector: %s", detector.Name())
+	klog.Infof("Registered detector: %s", detector.Name())
 }
 
 func (e *Engine) Start() {
@@ -138,14 +138,14 @@ func (e *Engine) IsRunning() bool {
 	return e.running
 }
 
-func (e *Engine) VerifyIdentity(identity interface{}) []*VerificationResult {
+func (e *Engine) Verify(identity interface{}) []*VerificationResult {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	results := make([]*VerificationResult, 0)
 	for _, verifier := range e.verifiers {
 		result, err := verifier.Verify(identity)
 		if err != nil {
-			klog.Errorf("Identity verifier %s failed: %v", verifier.Name(), err)
+			klog.Errorf("Verifier %s failed: %v", verifier.Name(), err)
 			continue
 		}
 		if result != nil {
@@ -155,14 +155,14 @@ func (e *Engine) VerifyIdentity(identity interface{}) []*VerificationResult {
 	return results
 }
 
-func (e *Engine) EnforcePolicy(policy interface{}, context interface{}) []*EnforcementResult {
+func (e *Engine) Enforce(policy interface{}, context interface{}) []*EnforcementResult {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	results := make([]*EnforcementResult, 0)
 	for _, enforcer := range e.enforcers {
 		result, err := enforcer.Enforce(policy, context)
 		if err != nil {
-			klog.Errorf("Policy enforcer %s failed: %v", enforcer.Name(), err)
+			klog.Errorf("Enforcer %s failed: %v", enforcer.Name(), err)
 			continue
 		}
 		if result != nil {
@@ -172,25 +172,24 @@ func (e *Engine) EnforcePolicy(policy interface{}, context interface{}) []*Enfor
 	return results
 }
 
-func (e *Engine) LogAudit(event interface{}) {
+func (e *Engine) Audit(event interface{}) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	for _, auditor := range e.auditors {
-		err := auditor.Log(event)
-		if err != nil {
-			klog.Errorf("Audit logger %s failed: %v", auditor.Name(), err)
+		if err := auditor.Audit(event); err != nil {
+			klog.Errorf("Auditor %s failed: %v", auditor.Name(), err)
 		}
 	}
 }
 
-func (e *Engine) DetectAnomalies(activity interface{}) []*SecurityAnomaly {
+func (e *Engine) Detect(activity interface{}) []*SecurityAnomaly {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	results := make([]*SecurityAnomaly, 0)
 	for _, detector := range e.detectors {
 		result, err := detector.Detect(activity)
 		if err != nil {
-			klog.Errorf("Security detector %s failed: %v", detector.Name(), err)
+			klog.Errorf("Detector %s failed: %v", detector.Name(), err)
 			continue
 		}
 		if result != nil {
