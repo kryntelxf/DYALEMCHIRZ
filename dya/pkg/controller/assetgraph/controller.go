@@ -40,14 +40,14 @@ import (
 
 // Controller is the asset graph controller
 type Controller struct {
-	kubeClient          kubernetes.Interface
-	dynamicClient       dynamic.Interface
-	graph               *graph.Graph
-	discoverer          *discovery.Discoverer
-	pipeline            *event.Pipeline
-	workqueue           workqueue.RateLimitingInterface
-	informerFactory     informers.SharedInformerFactory
-	reconciliationCount int64
+	kubeClient           kubernetes.Interface
+	dynamicClient        dynamic.Interface
+	graph                *graph.Graph
+	discoverer           *discovery.Discoverer
+	pipeline             *event.Pipeline
+	workqueue            workqueue.RateLimitingInterface
+	informerFactory      informers.SharedInformerFactory
+	reconciliationCount  int64
 	reconciliationErrors int64
 }
 
@@ -82,7 +82,9 @@ func NewController(config *rest.Config) (*Controller, error) {
 	return ctrl, nil
 }
 
+// registerEventHandlers registers Kubernetes event handlers
 func (c *Controller) registerEventHandlers() {
+	// Watch Pods
 	podInformer := c.informerFactory.Core().V1().Pods()
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handlePodAdd,
@@ -90,6 +92,7 @@ func (c *Controller) registerEventHandlers() {
 		DeleteFunc: c.handlePodDelete,
 	})
 
+	// Watch Nodes
 	nodeInformer := c.informerFactory.Core().V1().Nodes()
 	nodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleNodeAdd,
@@ -97,6 +100,7 @@ func (c *Controller) registerEventHandlers() {
 		DeleteFunc: c.handleNodeDelete,
 	})
 
+	// Watch Services
 	serviceInformer := c.informerFactory.Core().V1().Services()
 	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleServiceAdd,
@@ -111,13 +115,16 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 
 	klog.Info("Starting Asset Graph controller")
 
+	// Initial discovery
 	klog.Info("Running initial asset discovery...")
 	if err := c.discoverer.DiscoverAll(ctx); err != nil {
 		klog.Errorf("Initial discovery failed: %v", err)
 	}
 
+	// Start informers
 	c.informerFactory.Start(ctx.Done())
 
+	// Wait for cache sync
 	if !cache.WaitForCacheSync(ctx.Done(),
 		c.informerFactory.Core().V1().Pods().Informer().HasSynced,
 		c.informerFactory.Core().V1().Nodes().Informer().HasSynced,
@@ -128,10 +135,12 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 
 	klog.Info("Informers synced")
 
+	// Start workers
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
 
+	// Update metrics periodically
 	go c.updateMetricsLoop(ctx)
 
 	klog.Infof("Started %d workers", workers)
@@ -141,11 +150,13 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
+// runWorker processes work items
 func (c *Controller) runWorker(ctx context.Context) {
 	for c.processNextWorkItem(ctx) {
 	}
 }
 
+// processNextWorkItem processes a work item from the queue
 func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
@@ -170,6 +181,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
+// reconcile reconciles an asset
 func (c *Controller) reconcile(ctx context.Context, key string) error {
 	_, _, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -179,6 +191,7 @@ func (c *Controller) reconcile(ctx context.Context, key string) error {
 	return nil
 }
 
+// updateMetricsLoop updates metrics periodically
 func (c *Controller) updateMetricsLoop(ctx context.Context) {
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
@@ -188,12 +201,17 @@ func (c *Controller) updateMetricsLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			// Update graph metrics
 			nodes, edges := c.graph.Count()
 			metrics.SetGraphMetrics(float64(nodes), float64(edges))
+
+			// Update reconciliation metrics
 			metrics.SetReconciliationMetrics(
 				float64(atomic.LoadInt64(&c.reconciliationCount)),
 				float64(atomic.LoadInt64(&c.reconciliationErrors)),
 			)
+
+			// Update event metrics
 			eventMetrics := c.pipeline.GetMetrics()
 			metrics.SetEventMetrics(
 				float64(eventMetrics.Total),
@@ -214,8 +232,14 @@ func (c *Controller) GetPipeline() *event.Pipeline {
 	return c.pipeline
 }
 
+// KubeClient returns the Kubernetes client
+func (c *Controller) KubeClient() kubernetes.Interface {
+	return c.kubeClient
+}
+
 // --- Event Handlers ---
 
+// handlePodAdd handles Pod addition
 func (c *Controller) handlePodAdd(obj interface{}) {
 	pod, ok := obj.(*v1.Pod)
 	if !ok {
@@ -224,6 +248,7 @@ func (c *Controller) handlePodAdd(obj interface{}) {
 	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
 	c.workqueue.Add(key)
 
+	// Create event
 	evt := &event.Event{
 		ID:        fmt.Sprintf("pod-add-%s-%d", key, time.Now().UnixNano()),
 		Source:    "kubernetes",
@@ -239,6 +264,7 @@ func (c *Controller) handlePodAdd(obj interface{}) {
 	_ = c.pipeline.Process(context.Background(), evt)
 }
 
+// handlePodUpdate handles Pod update
 func (c *Controller) handlePodUpdate(old, new interface{}) {
 	pod, ok := new.(*v1.Pod)
 	if !ok {
@@ -248,6 +274,7 @@ func (c *Controller) handlePodUpdate(old, new interface{}) {
 	c.workqueue.Add(key)
 }
 
+// handlePodDelete handles Pod deletion
 func (c *Controller) handlePodDelete(obj interface{}) {
 	pod, ok := obj.(*v1.Pod)
 	if !ok {
@@ -256,8 +283,10 @@ func (c *Controller) handlePodDelete(obj interface{}) {
 	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
 	assetID := fmt.Sprintf("pod/%s", key)
 
+	// Remove from graph
 	_ = c.graph.RemoveNode(assetID)
 
+	// Create event
 	evt := &event.Event{
 		ID:        fmt.Sprintf("pod-delete-%s-%d", key, time.Now().UnixNano()),
 		Source:    "kubernetes",
@@ -272,6 +301,7 @@ func (c *Controller) handlePodDelete(obj interface{}) {
 	_ = c.pipeline.Process(context.Background(), evt)
 }
 
+// handleNodeAdd handles Node addition
 func (c *Controller) handleNodeAdd(obj interface{}) {
 	node, ok := obj.(*v1.Node)
 	if !ok {
@@ -280,6 +310,7 @@ func (c *Controller) handleNodeAdd(obj interface{}) {
 	c.workqueue.Add(node.Name)
 }
 
+// handleNodeUpdate handles Node update
 func (c *Controller) handleNodeUpdate(old, new interface{}) {
 	node, ok := new.(*v1.Node)
 	if !ok {
@@ -288,6 +319,7 @@ func (c *Controller) handleNodeUpdate(old, new interface{}) {
 	c.workqueue.Add(node.Name)
 }
 
+// handleNodeDelete handles Node deletion
 func (c *Controller) handleNodeDelete(obj interface{}) {
 	node, ok := obj.(*v1.Node)
 	if !ok {
@@ -296,6 +328,7 @@ func (c *Controller) handleNodeDelete(obj interface{}) {
 	_ = c.graph.RemoveNode(fmt.Sprintf("node/%s", node.Name))
 }
 
+// handleServiceAdd handles Service addition
 func (c *Controller) handleServiceAdd(obj interface{}) {
 	svc, ok := obj.(*v1.Service)
 	if !ok {
@@ -305,6 +338,7 @@ func (c *Controller) handleServiceAdd(obj interface{}) {
 	c.workqueue.Add(key)
 }
 
+// handleServiceUpdate handles Service update
 func (c *Controller) handleServiceUpdate(old, new interface{}) {
 	svc, ok := new.(*v1.Service)
 	if !ok {
@@ -314,6 +348,7 @@ func (c *Controller) handleServiceUpdate(old, new interface{}) {
 	c.workqueue.Add(key)
 }
 
+// handleServiceDelete handles Service deletion
 func (c *Controller) handleServiceDelete(obj interface{}) {
 	svc, ok := obj.(*v1.Service)
 	if !ok {
