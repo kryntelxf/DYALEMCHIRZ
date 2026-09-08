@@ -145,6 +145,16 @@ func (e *Engine) Stop() {
 	klog.Info("AI Engine stopped")
 }
 
+// IsRunning returns whether the engine is running
+func (e *Engine) IsRunning() bool {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.running
+}
+
 // Detect runs anomaly detection
 func (e *Engine) Detect(data interface{}) []*AnomalyResult {
 	if e == nil {
@@ -152,7 +162,7 @@ func (e *Engine) Detect(data interface{}) []*AnomalyResult {
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	results := make([]*AnomalyResult, 0)
 	for _, detector := range e.detectors {
 		if detector == nil {
@@ -177,7 +187,7 @@ func (e *Engine) Score(asset interface{}) []*RiskScore {
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	results := make([]*RiskScore, 0)
 	for _, scorer := range e.scorers {
 		if scorer == nil {
@@ -202,7 +212,7 @@ func (e *Engine) Predict(data interface{}) []*PredictionResult {
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	results := make([]*PredictionResult, 0)
 	for _, predictor := range e.predictors {
 		if predictor == nil {
