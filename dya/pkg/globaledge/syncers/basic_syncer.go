@@ -27,6 +27,6 @@ func (s *BasicSyncer) Name() string {
 }
 
 func (s *BasicSyncer) Sync() error {
-	klog.V(4).Info("BasicSyncer syncing global state")
+	klog.V(4).Info("BasicSyncer syncing")
 	return nil
 }
