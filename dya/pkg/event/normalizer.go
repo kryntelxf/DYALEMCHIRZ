@@ -16,9 +16,7 @@ limitations under the License.
 
 package event
 
-import (
-	"time"
-)
+import "time"
 
 // Normalizer normalizes events
 type Normalizer struct{}
@@ -30,8 +28,14 @@ func NewNormalizer() *Normalizer {
 
 // Normalize normalizes an event
 func (n *Normalizer) Normalize(event *Event) *Event {
+	if event == nil {
+		return nil
+	}
 	if event.Timestamp.IsZero() {
 		event.Timestamp = time.Now()
+	}
+	if event.ID == "" {
+		event.ID = "event-" + time.Now().Format("20060102150405")
 	}
 	return event
 }
