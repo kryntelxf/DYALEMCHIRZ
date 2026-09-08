@@ -39,21 +39,19 @@ func NewGraphStore(client kubernetes.Interface) *GraphStore {
 
 // Save saves the graph to storage
 func (s *GraphStore) Save(ctx context.Context, g *graph.Graph) error {
-	// In production, this would save to etcd via CRD or a database
-	// For Stage 2, we use ConfigMap as a simple storage
+	if g == nil {
+		return fmt.Errorf("graph is nil")
+	}
 	data, err := json.Marshal(g.GetAllNodes())
 	if err != nil {
 		return fmt.Errorf("failed to marshal graph: %w", err)
 	}
-
-	klog.V(4).Infof("Graph data: %s (simulated save)", string(data))
+	klog.V(4).Infof("Graph data size: %d bytes (simulated save)", len(data))
 	return nil
 }
 
 // Load loads the graph from storage
 func (s *GraphStore) Load(ctx context.Context) (*graph.Graph, error) {
-	// In production, this would load from etcd or database
-	// For Stage 2, we return an empty graph
 	klog.V(4).Info("Loading graph from storage (simulated)")
 	return graph.NewGraph(), nil
 }
