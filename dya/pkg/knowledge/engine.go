@@ -62,19 +62,19 @@ type Relation struct {
 }
 
 type Analysis struct {
-	KnowledgeID string   `json:"knowledgeId"`
-	Patterns    []string `json:"patterns"`
-	Insights    []string `json:"insights"`
-	Confidence  float64  `json:"confidence"`
+	KnowledgeID string    `json:"knowledgeId"`
+	Patterns    []string  `json:"patterns"`
+	Insights    []string  `json:"insights"`
+	Confidence  float64   `json:"confidence"`
 	Timestamp   time.Time `json:"timestamp"`
 }
 
 type QueryResult struct {
-	Query       string        `json:"query"`
-	Results     []interface{} `json:"results"`
-	Count       int           `json:"count"`
-	Duration    string        `json:"duration"`
-	Timestamp   time.Time     `json:"timestamp"`
+	Query     string        `json:"query"`
+	Results   []interface{} `json:"results"`
+	Count     int           `json:"count"`
+	Duration  string        `json:"duration"`
+	Timestamp time.Time     `json:"timestamp"`
 }
 
 func NewEngine() *Engine {
@@ -127,7 +127,13 @@ func (e *Engine) Stop() {
 	klog.Info("Knowledge Engine stopped")
 }
 
-func (e *Engine) ExtractKnowledge(data interface{}) []*Knowledge {
+func (e *Engine) IsRunning() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.running
+}
+
+func (e *Engine) Extract(data interface{}) []*Knowledge {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	results := make([]*Knowledge, 0)
@@ -144,7 +150,7 @@ func (e *Engine) ExtractKnowledge(data interface{}) []*Knowledge {
 	return results
 }
 
-func (e *Engine) AnalyzeKnowledge(knowledge *Knowledge) []*Analysis {
+func (e *Engine) Analyze(knowledge *Knowledge) []*Analysis {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	results := make([]*Analysis, 0)
