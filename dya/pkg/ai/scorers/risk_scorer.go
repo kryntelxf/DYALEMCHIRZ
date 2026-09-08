@@ -24,11 +24,16 @@ import (
 )
 
 // RiskScorer calculates risk scores
-type RiskScorer struct{}
+type RiskScorer struct {
+	// threshold for risk scoring
+	threshold float64
+}
 
 // NewRiskScorer creates a new risk scorer
 func NewRiskScorer() *RiskScorer {
-	return &RiskScorer{}
+	return &RiskScorer{
+		threshold: 50.0,
+	}
 }
 
 // Name returns the name of the scorer
@@ -48,12 +53,12 @@ func (s *RiskScorer) Score(asset interface{}) (*ai.RiskScore, error) {
 	}
 
 	klog.V(4).Info("RiskScorer calculating risk")
-	
+
 	return &ai.RiskScore{
 		AssetID: "unknown",
 		Score:   15.0,
 		Factors: map[string]float64{
-			"age":         5.0,
+			"age":          5.0,
 			"dependencies": 10.0,
 		},
 		Timestamp: time.Now(),
