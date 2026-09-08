@@ -24,10 +24,10 @@ import (
 )
 
 type Engine struct {
-	mu            sync.RWMutex
-	simulators    []Simulator
-	analyzers     []ImpactAnalyzer
-	running       bool
+	mu          sync.RWMutex
+	simulators  []Simulator
+	analyzers   []Analyzer
+	running     bool
 }
 
 type Simulator interface {
@@ -35,40 +35,41 @@ type Simulator interface {
 	Name() string
 }
 
-type ImpactAnalyzer interface {
-	Analyze(asset interface{}) (*ImpactResult, error)
+type Analyzer interface {
+	Analyze(result *SimulationResult) (*Analysis, error)
 	Name() string
 }
 
 type Scenario struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Assets      []string          `json:"assets"`
-	Parameters  map[string]string `json:"parameters"`
+	ID          string                 `json:"id"`
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Changes     map[string]interface{} `json:"changes"`
+	Parameters  map[string]string      `json:"parameters"`
 }
 
 type SimulationResult struct {
-	ScenarioID      string    `json:"scenarioId"`
-	Status          string    `json:"status"`
-	Impact          string    `json:"impact"`
-	RecoveryTime    string    `json:"recoveryTime"`
-	AffectedAssets  []string  `json:"affectedAssets"`
-	Recommendations []string  `json:"recommendations"`
-	Timestamp       time.Time `json:"timestamp"`
+	ScenarioID      string                 `json:"scenarioId"`
+	Status          string                 `json:"status"`
+	Impact          string                 `json:"impact"`
+	AffectedAssets  []string               `json:"affectedAssets"`
+	Metrics         map[string]interface{} `json:"metrics"`
+	Recommendations []string               `json:"recommendations"`
+	Timestamp       time.Time              `json:"timestamp"`
 }
 
-type ImpactResult struct {
-	AssetID         string   `json:"assetId"`
-	ImpactLevel     string   `json:"impactLevel"`
-	Dependencies    []string `json:"dependencies"`
-	Criticality     string   `json:"criticality"`
+type Analysis struct {
+	ScenarioID   string   `json:"scenarioId"`
+	RiskLevel    string   `json:"riskLevel"`
+	Insights     []string `json:"insights"`
+	Confidence   float64  `json:"confidence"`
+	Timestamp    time.Time `json:"timestamp"`
 }
 
 func NewEngine() *Engine {
 	return &Engine{
 		simulators: make([]Simulator, 0),
-		analyzers:  make([]ImpactAnalyzer, 0),
+		analyzers:  make([]Analyzer, 0),
 		running:    false,
 	}
 }
@@ -80,11 +81,11 @@ func (e *Engine) RegisterSimulator(simulator Simulator) {
 	klog.Infof("Registered simulator: %s", simulator.Name())
 }
 
-func (e *Engine) RegisterAnalyzer(analyzer ImpactAnalyzer) {
+func (e *Engine) RegisterAnalyzer(analyzer Analyzer) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.analyzers = append(e.analyzers, analyzer)
-	klog.Infof("Registered impact analyzer: %s", analyzer.Name())
+	klog.Infof("Registered analyzer: %s", analyzer.Name())
 }
 
 func (e *Engine) Start() {
@@ -130,19 +131,21 @@ func (e *Engine) Simulate(scenario *Scenario) []*SimulationResult {
 	return results
 }
 
-func (e *Engine) AnalyzeImpact(asset interface{}) []*ImpactResult {
+func (e *Engine) Analyze(results []*SimulationResult) []*Analysis {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	results := make([]*ImpactResult, 0)
+	analyses := make([]*Analysis, 0)
 	for _, analyzer := range e.analyzers {
-		result, err := analyzer.Analyze(asset)
-		if err != nil {
-			klog.Errorf("Impact analyzer %s failed: %v", analyzer.Name(), err)
-			continue
-		}
-		if result != nil {
-			results = append(results, result)
+		for _, result := range results {
+			analysis, err := analyzer.Analyze(result)
+			if err != nil {
+				klog.Errorf("Analyzer %s failed: %v", analyzer.Name(), err)
+				continue
+			}
+			if analysis != nil {
+				analyses = append(analyses, analysis)
+			}
 		}
 	}
-	return results
+	return analyses
 }
