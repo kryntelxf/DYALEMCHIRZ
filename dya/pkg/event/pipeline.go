@@ -29,7 +29,7 @@ import (
 type Event struct {
 	ID          string                 `json:"id"`
 	Source      string                 `json:"source"`
-	Type        string                 `json:"type"` // create, update, delete
+	Type        string                 `json:"type"`
 	AssetID     string                 `json:"assetId"`
 	Timestamp   time.Time              `json:"timestamp"`
 	Data        map[string]interface{} `json:"data"`
@@ -58,11 +58,11 @@ type Handler interface {
 
 // Metrics tracks event statistics
 type Metrics struct {
-	mu          sync.RWMutex
-	Total       int64
-	Processed   int64
-	Failed      int64
-	LastEvent   time.Time
+	mu        sync.RWMutex
+	Total     int64
+	Processed int64
+	Failed    int64
+	LastEvent time.Time
 }
 
 // NewPipeline creates a new event pipeline
@@ -77,6 +77,9 @@ func NewPipeline() *Pipeline {
 
 // RegisterProcessor adds a processor
 func (p *Pipeline) RegisterProcessor(processor Processor) {
+	if p == nil || processor == nil {
+		return
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.processors = append(p.processors, processor)
@@ -85,6 +88,9 @@ func (p *Pipeline) RegisterProcessor(processor Processor) {
 
 // RegisterHandler adds a handler
 func (p *Pipeline) RegisterHandler(handler Handler) {
+	if p == nil || handler == nil {
+		return
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.handlers = append(p.handlers, handler)
@@ -93,8 +99,8 @@ func (p *Pipeline) RegisterHandler(handler Handler) {
 
 // Process processes an event through the pipeline
 func (p *Pipeline) Process(ctx context.Context, event *Event) error {
-	if event == nil {
-		return fmt.Errorf("event is nil")
+	if p == nil || event == nil {
+		return fmt.Errorf("pipeline or event is nil")
 	}
 
 	p.mu.Lock()
@@ -102,9 +108,11 @@ func (p *Pipeline) Process(ctx context.Context, event *Event) error {
 	p.metrics.LastEvent = time.Now()
 	p.mu.Unlock()
 
-	// Process through processors
 	current := event
 	for _, processor := range p.processors {
+		if processor == nil {
+			continue
+		}
 		var err error
 		current, err = processor.Process(current)
 		if err != nil {
@@ -113,10 +121,15 @@ func (p *Pipeline) Process(ctx context.Context, event *Event) error {
 			p.mu.Unlock()
 			return fmt.Errorf("processor %s failed: %w", processor.Name(), err)
 		}
+		if current == nil {
+			return fmt.Errorf("processor %s returned nil event", processor.Name())
+		}
 	}
 
-	// Handle the event
 	for _, handler := range p.handlers {
+		if handler == nil {
+			continue
+		}
 		if err := handler.Handle(current); err != nil {
 			klog.Errorf("Handler %s failed: %v", handler.Name(), err)
 		}
@@ -136,6 +149,9 @@ func (p *Pipeline) Process(ctx context.Context, event *Event) error {
 
 // GetMetrics returns event metrics
 func (p *Pipeline) GetMetrics() *Metrics {
+	if p == nil {
+		return &Metrics{}
+	}
 	p.metrics.mu.RLock()
 	defer p.metrics.mu.RUnlock()
 	return &Metrics{
