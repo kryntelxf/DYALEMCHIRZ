@@ -23,13 +23,24 @@ import (
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 )
 
+// BasicAnalyzer is a basic analyzer
 type BasicAnalyzer struct{}
 
+// NewBasicAnalyzer creates a new basic analyzer
+func NewBasicAnalyzer() *BasicAnalyzer {
+	return &BasicAnalyzer{}
+}
+
+// Name returns the name
 func (a *BasicAnalyzer) Name() string {
 	return "basic-analyzer"
 }
 
+// Analyze runs analysis
 func (a *BasicAnalyzer) Analyze(result *digitaltwin.SimulationResult) (*digitaltwin.Analysis, error) {
+	if result == nil {
+		return nil, nil
+	}
 	klog.V(4).Infof("Analyzing simulation result for scenario: %s", result.ScenarioID)
 	return &digitaltwin.Analysis{
 		ScenarioID: result.ScenarioID,
