@@ -40,6 +40,10 @@ import (
 	"k8s.io/kubernetes/dya/pkg/impact"
 	"k8s.io/kubernetes/dya/pkg/metrics"
 	"k8s.io/kubernetes/dya/pkg/query"
+	"k8s.io/kubernetes/dya/pkg/recovery"
+	"k8s.io/kubernetes/dya/pkg/recovery/executors"
+	"k8s.io/kubernetes/dya/pkg/recovery/notifiers"
+	"k8s.io/kubernetes/dya/pkg/recovery/verifiers"
 	"k8s.io/kubernetes/dya/pkg/resilience"
 	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
 	resdetectors "k8s.io/kubernetes/dya/pkg/resilience/detectors"
@@ -70,8 +74,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 5: Resilience Engine                                ║")
-	fmt.Println("║   Version: 0.6.0                                            ║")
+	fmt.Println("║   Stage 6: Recovery Orchestrator                            ║")
+	fmt.Println("║   Version: 0.7.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -149,6 +153,23 @@ func main() {
 	defer resilienceEngine.Stop()
 	klog.Info("Resilience Engine started successfully")
 
+	// ============================================
+	// RECOVERY ORCHESTRATOR
+	// ============================================
+
+	klog.Info("Creating Recovery Orchestrator...")
+	recoveryOrchestrator := recovery.NewOrchestrator()
+
+	klog.Info("Registering Recovery components...")
+	recoveryOrchestrator.RegisterExecutor(&executors.BasicExecutor{})
+	recoveryOrchestrator.RegisterVerifier(&verifiers.BasicVerifier{})
+	recoveryOrchestrator.RegisterNotifier(&notifiers.BasicNotifier{})
+
+	klog.Info("Starting Recovery Orchestrator...")
+	recoveryOrchestrator.Start()
+	defer recoveryOrchestrator.Stop()
+	klog.Info("Recovery Orchestrator started successfully")
+
 	// Load graph from storage
 	klog.Info("Loading graph from storage...")
 	if _, err := storageStore.Load(ctx); err != nil {
@@ -173,6 +194,9 @@ func main() {
 	pipeline.RegisterHandler(&resilienceEventHandler{
 		resilienceEngine: resilienceEngine,
 	})
+	pipeline.RegisterHandler(&recoveryEventHandler{
+		recoveryOrchestrator: recoveryOrchestrator,
+	})
 
 	// Mark components as healthy
 	healthChecker.SetComponent("controller", true)
@@ -181,10 +205,11 @@ func main() {
 	healthChecker.SetComponent("event-pipeline", true)
 	healthChecker.SetComponent("ai-engine", true)
 	healthChecker.SetComponent("resilience-engine", true)
+	healthChecker.SetComponent("recovery-orchestrator", true)
 	healthChecker.SetReady(true)
 
 	// Start health server
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator)
 
 	// Run controller
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -303,11 +328,27 @@ func (h *resilienceEventHandler) Handle(e *event.Event) error {
 	return nil
 }
 
+type recoveryEventHandler struct {
+	recoveryOrchestrator *recovery.Orchestrator
+}
+
+func (h *recoveryEventHandler) Name() string {
+	return "recovery-event-handler"
+}
+
+func (h *recoveryEventHandler) Handle(e *event.Event) error {
+	if e == nil || h.recoveryOrchestrator == nil {
+		return nil
+	}
+	klog.V(4).Infof("Recovery orchestrator processing event for asset: %s", e.AssetID)
+	return nil
+}
+
 // ============================================
 // HEALTH SERVER
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator) {
 	mux := http.NewServeMux()
 
 	// Health endpoints
@@ -572,6 +613,49 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 			resilienceEngine != nil && resilienceEngine.IsRunning())
 	})
 
+	// Recovery Orchestrator endpoints
+	mux.HandleFunc("/api/recovery/execute", func(w http.ResponseWriter, r *http.Request) {
+		assetID := r.URL.Query().Get("asset")
+		if assetID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing asset parameter"))
+			return
+		}
+		node, ok := queryAPI.GetNode(assetID)
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, "{\"asset\": \"%s\", \"status\": \"asset not found\"}\n", assetID)
+			return
+		}
+
+		// Create a simple plan for the asset
+		plan := &simplePlan{
+			assetID: assetID,
+			name:    "recovery-" + assetID,
+			steps: []recovery.Step{
+				{ID: "step-1", Name: "Investigate failure", Action: "investigate", Description: "Investigate the cause of failure", Timeout: 30 * time.Second},
+				{ID: "step-2", Name: "Restart service", Action: "restart", Description: "Restart the failed service", Timeout: 60 * time.Second},
+				{ID: "step-3", Name: "Verify recovery", Action: "verify", Description: "Verify that the service is recovered", Timeout: 30 * time.Second},
+			},
+		}
+
+		status := recoveryOrchestrator.ExecutePlan(plan)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"asset\": \"%s\", \"status\": %v}\n", assetID, status)
+	})
+
+	mux.HandleFunc("/api/recovery/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
+			func() string {
+				if recoveryOrchestrator != nil && recoveryOrchestrator.IsRunning() {
+					return "healthy"
+				}
+				return "unhealthy"
+			}(),
+			recoveryOrchestrator != nil && recoveryOrchestrator.IsRunning())
+	})
+
 	addr := fmt.Sprintf(":%d", port)
 	klog.Infof("Health server listening on %s", addr)
 
@@ -583,6 +667,33 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		klog.Errorf("Health server failed: %v", err)
 	}
+}
+
+// simplePlan implements recovery.Plan
+type simplePlan struct {
+	assetID string
+	name    string
+	steps   []recovery.Step
+}
+
+func (p *simplePlan) GetSteps() []recovery.Step {
+	return p.steps
+}
+
+func (p *simplePlan) GetAssetID() string {
+	return p.assetID
+}
+
+func (p *simplePlan) GetPriority() int {
+	return 1
+}
+
+func (p *simplePlan) RequiresApproval() bool {
+	return false
+}
+
+func (p *simplePlan) Name() string {
+	return p.name
 }
 
 func getConfig() (*rest.Config, error) {
