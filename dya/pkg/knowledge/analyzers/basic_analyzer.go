@@ -30,11 +30,11 @@ func (a *BasicAnalyzer) Name() string {
 }
 
 func (a *BasicAnalyzer) Analyze(k *knowledge.Knowledge) (*knowledge.Analysis, error) {
-	klog.V(4).Info("BasicAnalyzer running")
+	klog.V(4).Info("BasicAnalyzer analyzing knowledge")
 	return &knowledge.Analysis{
 		KnowledgeID: k.ID,
 		Patterns:    []string{"pattern-1"},
-		Insights:    []string{"Insight: Infrastructure is stable"},
+		Insights:    []string{"Infrastructure is stable"},
 		Confidence:  95.0,
 		Timestamp:   time.Now(),
 	}, nil
