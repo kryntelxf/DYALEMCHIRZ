@@ -31,6 +31,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
+	"k8s.io/kubernetes/dya/pkg/event"
 	"k8s.io/kubernetes/dya/pkg/health"
 	"k8s.io/kubernetes/dya/pkg/impact"
 	"k8s.io/kubernetes/dya/pkg/metrics"
@@ -61,8 +62,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 2: Asset Graph Enhancement                          ║")
-	fmt.Println("║   Version: 0.3.0                                            ║")
+	fmt.Println("║   Stage 3: Event Intelligence                               ║")
+	fmt.Println("║   Version: 0.4.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -106,20 +107,50 @@ func main() {
 	// Initialize query API
 	queryAPI := query.NewAPI(controller.GetGraph())
 
+	// ============================================
+	// EVENT INTELLIGENCE COMPONENTS
+	// ============================================
+
+	// Create event store
+	eventStore := event.NewStore(10000)
+
+	// Create event normalizer
+	normalizer := event.NewNormalizer()
+
+	// Create event correlator
+	correlator := event.NewCorrelator(5 * time.Minute)
+
+	// Create event analyzer
+	analyzer := event.NewAnalyzer(10)
+
 	// Load graph from storage
 	klog.Info("Loading graph from storage...")
 	if _, err := storageStore.Load(ctx); err != nil {
 		klog.Warningf("Failed to load graph from storage: %v", err)
 	}
 
+	// Register event handlers to the pipeline
+	pipeline := controller.GetPipeline()
+	pipeline.RegisterHandler(&eventStoreHandler{
+		store:      eventStore,
+		normalizer: normalizer,
+	})
+	pipeline.RegisterHandler(&eventAnalyzerHandler{
+		analyzer: analyzer,
+	})
+	pipeline.RegisterHandler(&eventCorrelatorHandler{
+		correlator: correlator,
+	})
+
 	// Mark components as healthy
 	healthChecker.SetComponent("controller", true)
 	healthChecker.SetComponent("kubernetes-api", true)
 	healthChecker.SetComponent("storage", true)
+	healthChecker.SetComponent("event-pipeline", true)
 	healthChecker.SetReady(true)
 
 	// Start health server
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore)
 
 	// Run controller
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -136,8 +167,58 @@ func main() {
 	klog.Info("Controller shutdown complete")
 }
 
+// eventStoreHandler handles event storage
+type eventStoreHandler struct {
+	store      *event.Store
+	normalizer *event.Normalizer
+}
+
+func (h *eventStoreHandler) Name() string {
+	return "event-store-handler"
+}
+
+func (h *eventStoreHandler) Handle(e *event.Event) error {
+	normalized := h.normalizer.Normalize(e)
+	h.store.Add(normalized)
+	klog.V(4).Infof("Stored event: %s for asset %s", e.ID, e.AssetID)
+	return nil
+}
+
+// eventAnalyzerHandler handles event analysis
+type eventAnalyzerHandler struct {
+	analyzer *event.Analyzer
+}
+
+func (h *eventAnalyzerHandler) Name() string {
+	return "event-analyzer-handler"
+}
+
+func (h *eventAnalyzerHandler) Handle(e *event.Event) error {
+	result := h.analyzer.Analyze(e)
+	if result.AnomalyDetected {
+		klog.Warningf("Anomaly detected: %s (severity: %s)", result.Message, result.Severity)
+	}
+	return nil
+}
+
+// eventCorrelatorHandler handles event correlation
+type eventCorrelatorHandler struct {
+	correlator *event.Correlator
+}
+
+func (h *eventCorrelatorHandler) Name() string {
+	return "event-correlator-handler"
+}
+
+func (h *eventCorrelatorHandler) Handle(e *event.Event) error {
+	// For Stage 3, we just log correlation
+	// In production, this would correlate with recent events
+	klog.V(4).Infof("Correlating event: %s", e.ID)
+	return nil
+}
+
 // startHealthServer starts the health endpoint
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store) {
 	mux := http.NewServeMux()
 
 	// Health endpoints
@@ -226,6 +307,41 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		nodes := queryAPI.GetNodesByKind(kind)
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, "{\"kind\": \"%s\", \"count\": %d, \"nodes\": %v}\n", kind, len(nodes), nodes)
+	})
+
+	// ============================================
+	// EVENT INTELLIGENCE ENDPOINTS
+	// ============================================
+
+	// Get recent events
+	mux.HandleFunc("/api/events/recent", func(w http.ResponseWriter, r *http.Request) {
+		limit := 100
+		if r.URL.Query().Get("limit") != "" {
+			fmt.Sscanf(r.URL.Query().Get("limit"), "%d", &limit)
+		}
+		events := eventStore.GetRecent(limit)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"count\": %d, \"events\": %v}\n", len(events), events)
+	})
+
+	// Get events by asset
+	mux.HandleFunc("/api/events/by-asset", func(w http.ResponseWriter, r *http.Request) {
+		assetID := r.URL.Query().Get("asset")
+		if assetID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing asset parameter"))
+			return
+		}
+		events := eventStore.GetByAsset(assetID)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"asset\": \"%s\", \"count\": %d, \"events\": %v}\n", assetID, len(events), events)
+	})
+
+	// Event count
+	mux.HandleFunc("/api/events/count", func(w http.ResponseWriter, r *http.Request) {
+		count := eventStore.Count()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"total_events\": %d}\n", count)
 	})
 
 	addr := fmt.Sprintf(":%d", port)
