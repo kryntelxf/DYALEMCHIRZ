@@ -110,67 +110,43 @@ func main() {
 	impactAnalyzer := impact.NewAnalyzer(controller.GetGraph())
 	queryAPI := query.NewAPI(controller.GetGraph())
 
-	// ============================================
-	// EVENT INTELLIGENCE COMPONENTS
-	// ============================================
-
+	// EVENT INTELLIGENCE
 	eventStore := event.NewStore(10000)
 	normalizer := event.NewNormalizer()
 	correlator := event.NewCorrelator(5 * time.Minute)
 	analyzer := event.NewAnalyzer(10)
 
-	// ============================================
-	// AI ENGINE COMPONENTS
-	// ============================================
-
+	// AI ENGINE
 	klog.Info("Creating AI Engine...")
 	aiEngine := ai.NewEngine()
-
-	klog.Info("Registering AI components...")
 	aiEngine.RegisterDetector(aidetectors.NewStatisticalDetector(2.0, 10))
 	aiEngine.RegisterScorer(scorers.NewRiskScorer())
 	aiEngine.RegisterPredictor(aipredictors.NewSimplePredictor())
-
-	klog.Info("Starting AI Engine...")
 	aiEngine.Start()
 	defer aiEngine.Stop()
 	klog.Info("AI Engine started successfully")
 
-	// ============================================
-	// RESILIENCE ENGINE COMPONENTS
-	// ============================================
-
+	// RESILIENCE ENGINE
 	klog.Info("Creating Resilience Engine...")
 	resilienceEngine := resilience.NewEngine()
-
-	klog.Info("Registering Resilience components...")
 	resilienceEngine.RegisterHealthChecker(&checkers.BasicChecker{})
 	resilienceEngine.RegisterFailureDetector(&resdetectors.BasicDetector{})
 	resilienceEngine.RegisterRecoveryPlanner(&planners.BasicPlanner{})
-
-	klog.Info("Starting Resilience Engine...")
 	resilienceEngine.Start()
 	defer resilienceEngine.Stop()
 	klog.Info("Resilience Engine started successfully")
 
-	// ============================================
 	// RECOVERY ORCHESTRATOR
-	// ============================================
-
 	klog.Info("Creating Recovery Orchestrator...")
 	recoveryOrchestrator := recovery.NewOrchestrator()
-
-	klog.Info("Registering Recovery components...")
 	recoveryOrchestrator.RegisterExecutor(&executors.BasicExecutor{})
 	recoveryOrchestrator.RegisterVerifier(&verifiers.BasicVerifier{})
 	recoveryOrchestrator.RegisterNotifier(&notifiers.BasicNotifier{})
-
-	klog.Info("Starting Recovery Orchestrator...")
 	recoveryOrchestrator.Start()
 	defer recoveryOrchestrator.Stop()
 	klog.Info("Recovery Orchestrator started successfully")
 
-	// Load graph from storage
+	// Load graph
 	klog.Info("Loading graph from storage...")
 	if _, err := storageStore.Load(ctx); err != nil {
 		klog.Warningf("Failed to load graph from storage: %v", err)
@@ -178,27 +154,14 @@ func main() {
 
 	// Register event handlers
 	pipeline := controller.GetPipeline()
-	pipeline.RegisterHandler(&eventStoreHandler{
-		store:      eventStore,
-		normalizer: normalizer,
-	})
-	pipeline.RegisterHandler(&eventAnalyzerHandler{
-		analyzer: analyzer,
-	})
-	pipeline.RegisterHandler(&eventCorrelatorHandler{
-		correlator: correlator,
-	})
-	pipeline.RegisterHandler(&aiEventHandler{
-		aiEngine: aiEngine,
-	})
-	pipeline.RegisterHandler(&resilienceEventHandler{
-		resilienceEngine: resilienceEngine,
-	})
-	pipeline.RegisterHandler(&recoveryEventHandler{
-		recoveryOrchestrator: recoveryOrchestrator,
-	})
+	pipeline.RegisterHandler(&eventStoreHandler{store: eventStore, normalizer: normalizer})
+	pipeline.RegisterHandler(&eventAnalyzerHandler{analyzer: analyzer})
+	pipeline.RegisterHandler(&eventCorrelatorHandler{correlator: correlator})
+	pipeline.RegisterHandler(&aiEventHandler{aiEngine: aiEngine})
+	pipeline.RegisterHandler(&resilienceEventHandler{resilienceEngine: resilienceEngine})
+	pipeline.RegisterHandler(&recoveryEventHandler{recoveryOrchestrator: recoveryOrchestrator})
 
-	// Mark components as healthy
+	// Health checks
 	healthChecker.SetComponent("controller", true)
 	healthChecker.SetComponent("kubernetes-api", true)
 	healthChecker.SetComponent("storage", true)
@@ -217,7 +180,7 @@ func main() {
 		klog.Fatalf("Controller failed: %v", err)
 	}
 
-	// Save graph to storage
+	// Save graph
 	klog.Info("Saving graph to storage...")
 	if err := storageStore.Save(ctx, controller.GetGraph()); err != nil {
 		klog.Errorf("Failed to save graph: %v", err)
@@ -303,12 +266,6 @@ func (h *aiEventHandler) Handle(e *event.Event) error {
 				anomaly.Description, anomaly.Score, anomaly.Severity)
 		}
 	}
-	riskScores := h.aiEngine.Score(e)
-	for _, score := range riskScores {
-		if score != nil {
-			klog.V(4).Infof("Risk score for asset %s: %.2f", score.AssetID, score.Score)
-		}
-	}
 	return nil
 }
 
@@ -372,7 +329,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		}
 	})
 
-	// Metrics endpoint
+	// Metrics
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		metricsData := metrics.GetMetrics()
 		w.Header().Set("Content-Type", "text/plain")
@@ -383,7 +340,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		}
 	})
 
-	// Graph query endpoints
+	// Graph endpoints
 	mux.HandleFunc("/api/graph/nodes", func(w http.ResponseWriter, r *http.Request) {
 		nodes := queryAPI.GetAllNodes()
 		w.Header().Set("Content-Type", "application/json")
@@ -414,6 +371,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"asset\": \"%s\", \"dependents\": %v}\n", assetID, deps)
 	})
 
+	// Impact
 	mux.HandleFunc("/api/impact/analyze", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -621,14 +579,13 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 			w.Write([]byte("missing asset parameter"))
 			return
 		}
-		node, ok := queryAPI.GetNode(assetID)
+		_, ok := queryAPI.GetNode(assetID)
 		if !ok {
 			w.Header().Set("Content-Type", "application/json")
 			fmt.Fprintf(w, "{\"asset\": \"%s\", \"status\": \"asset not found\"}\n", assetID)
 			return
 		}
 
-		// Create a simple plan for the asset
 		plan := &simplePlan{
 			assetID: assetID,
 			name:    "recovery-" + assetID,
