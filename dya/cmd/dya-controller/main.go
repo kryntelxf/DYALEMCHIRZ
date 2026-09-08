@@ -36,7 +36,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
-	"k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
+	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
 	"k8s.io/kubernetes/dya/pkg/edge"
 	"k8s.io/kubernetes/dya/pkg/edge/buffers"
@@ -47,7 +47,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/health"
 	"k8s.io/kubernetes/dya/pkg/impact"
 	"k8s.io/kubernetes/dya/pkg/knowledge"
-	"k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
+	knowledgeanalyzers "k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
 	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
 	"k8s.io/kubernetes/dya/pkg/knowledge/queriers"
 	"k8s.io/kubernetes/dya/pkg/metrics"
@@ -127,17 +127,13 @@ func main() {
 	impactAnalyzer := impact.NewAnalyzer(controller.GetGraph())
 	queryAPI := query.NewAPI(controller.GetGraph())
 
-	// ============================================
 	// EVENT INTELLIGENCE
-	// ============================================
 	eventStore := event.NewStore(10000)
 	normalizer := event.NewNormalizer()
 	correlator := event.NewCorrelator(5 * time.Minute)
 	analyzer := event.NewAnalyzer(10)
 
-	// ============================================
 	// AI ENGINE
-	// ============================================
 	klog.Info("Creating AI Engine...")
 	aiEngine := ai.NewEngine()
 	aiEngine.RegisterDetector(aidetectors.NewStatisticalDetector(2.0, 10))
@@ -147,9 +143,7 @@ func main() {
 	defer aiEngine.Stop()
 	klog.Info("AI Engine started successfully")
 
-	// ============================================
 	// RESILIENCE ENGINE
-	// ============================================
 	klog.Info("Creating Resilience Engine...")
 	resilienceEngine := resilience.NewEngine()
 	resilienceEngine.RegisterHealthChecker(&checkers.BasicChecker{})
@@ -159,9 +153,7 @@ func main() {
 	defer resilienceEngine.Stop()
 	klog.Info("Resilience Engine started successfully")
 
-	// ============================================
 	// RECOVERY ORCHESTRATOR
-	// ============================================
 	klog.Info("Creating Recovery Orchestrator...")
 	recoveryOrchestrator := recovery.NewOrchestrator()
 	recoveryOrchestrator.RegisterExecutor(&executors.BasicExecutor{})
@@ -171,20 +163,16 @@ func main() {
 	defer recoveryOrchestrator.Stop()
 	klog.Info("Recovery Orchestrator started successfully")
 
-	// ============================================
 	// DIGITAL TWIN
-	// ============================================
 	klog.Info("Creating Digital Twin Engine...")
 	digitalTwinEngine := digitaltwin.NewEngine()
 	digitalTwinEngine.RegisterSimulator(&simulators.BasicSimulator{})
-	digitalTwinEngine.RegisterAnalyzer(&analyzers.BasicAnalyzer{})
+	digitalTwinEngine.RegisterAnalyzer(&dtanalyzers.BasicAnalyzer{})
 	digitalTwinEngine.Start()
 	defer digitalTwinEngine.Stop()
 	klog.Info("Digital Twin Engine started successfully")
 
-	// ============================================
 	// SECURITY ENGINE
-	// ============================================
 	klog.Info("Creating Security Engine...")
 	securityEngine := security.NewEngine()
 	securityEngine.RegisterVerifier(&securityverifiers.BasicVerifier{})
@@ -195,9 +183,7 @@ func main() {
 	defer securityEngine.Stop()
 	klog.Info("Security Engine started successfully")
 
-	// ============================================
 	// EDGE FABRIC
-	// ============================================
 	klog.Info("Creating Edge Engine...")
 	edgeEngine := edge.NewEngine()
 	edgeEngine.RegisterHandler(&edgehandlers.BasicHandler{})
@@ -208,29 +194,23 @@ func main() {
 	defer edgeEngine.Stop()
 	klog.Info("Edge Engine started successfully")
 
-	// ============================================
 	// KNOWLEDGE ENGINE
-	// ============================================
 	klog.Info("Creating Knowledge Engine...")
 	knowledgeEngine := knowledge.NewEngine()
 	knowledgeEngine.RegisterExtractor(&extractors.BasicExtractor{})
-	knowledgeEngine.RegisterAnalyzer(&analyzers.BasicAnalyzer{})
+	knowledgeEngine.RegisterAnalyzer(&knowledgeanalyzers.BasicAnalyzer{})
 	knowledgeEngine.RegisterQuerier(&queriers.BasicQuerier{})
 	knowledgeEngine.Start()
 	defer knowledgeEngine.Stop()
 	klog.Info("Knowledge Engine started successfully")
 
-	// ============================================
 	// LOAD GRAPH
-	// ============================================
 	klog.Info("Loading graph from storage...")
 	if _, err := storageStore.Load(ctx); err != nil {
 		klog.Warningf("Failed to load graph from storage: %v", err)
 	}
 
-	// ============================================
 	// REGISTER EVENT HANDLERS
-	// ============================================
 	pipeline := controller.GetPipeline()
 	pipeline.RegisterHandler(&eventStoreHandler{store: eventStore, normalizer: normalizer})
 	pipeline.RegisterHandler(&eventAnalyzerHandler{analyzer: analyzer})
@@ -241,9 +221,7 @@ func main() {
 	pipeline.RegisterHandler(&securityEventHandler{securityEngine: securityEngine})
 	pipeline.RegisterHandler(&knowledgeEventHandler{knowledgeEngine: knowledgeEngine})
 
-	// ============================================
 	// HEALTH CHECKS
-	// ============================================
 	healthChecker.SetComponent("controller", true)
 	healthChecker.SetComponent("kubernetes-api", true)
 	healthChecker.SetComponent("storage", true)
@@ -257,22 +235,16 @@ func main() {
 	healthChecker.SetComponent("knowledge-engine", true)
 	healthChecker.SetReady(true)
 
-	// ============================================
 	// START HEALTH SERVER
-	// ============================================
 	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine)
 
-	// ============================================
 	// RUN CONTROLLER
-	// ============================================
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
 	if err := controller.Run(ctx, workers); err != nil {
 		klog.Fatalf("Controller failed: %v", err)
 	}
 
-	// ============================================
 	// SAVE GRAPH
-	// ============================================
 	klog.Info("Saving graph to storage...")
 	if err := storageStore.Save(ctx, controller.GetGraph()); err != nil {
 		klog.Errorf("Failed to save graph: %v", err)
