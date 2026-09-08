@@ -23,13 +23,24 @@ import (
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 )
 
+// BasicSimulator is a basic simulator
 type BasicSimulator struct{}
 
+// NewBasicSimulator creates a new basic simulator
+func NewBasicSimulator() *BasicSimulator {
+	return &BasicSimulator{}
+}
+
+// Name returns the name
 func (s *BasicSimulator) Name() string {
 	return "basic-simulator"
 }
 
+// Simulate runs simulation
 func (s *BasicSimulator) Simulate(scenario *digitaltwin.Scenario) (*digitaltwin.SimulationResult, error) {
+	if scenario == nil {
+		return nil, nil
+	}
 	klog.V(4).Infof("Simulating scenario: %s", scenario.Name)
 	return &digitaltwin.SimulationResult{
 		ScenarioID:     scenario.ID,
@@ -37,9 +48,9 @@ func (s *BasicSimulator) Simulate(scenario *digitaltwin.Scenario) (*digitaltwin.
 		Impact:         "low",
 		AffectedAssets: []string{"asset-1", "asset-2"},
 		Metrics: map[string]interface{}{
-			"nodes":     10,
-			"pods":      50,
-			"services":  5,
+			"nodes":    10,
+			"pods":     50,
+			"services": 5,
 		},
 		Recommendations: []string{"No action needed", "Monitor for 24 hours"},
 		Timestamp:       time.Now(),
