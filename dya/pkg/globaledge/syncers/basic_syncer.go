@@ -20,12 +20,20 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// BasicSyncer is a basic edge syncer
 type BasicSyncer struct{}
 
+// NewBasicSyncer creates a new basic syncer
+func NewBasicSyncer() *BasicSyncer {
+	return &BasicSyncer{}
+}
+
+// Name returns the name of the syncer
 func (s *BasicSyncer) Name() string {
 	return "basic-syncer"
 }
 
+// Sync performs synchronization
 func (s *BasicSyncer) Sync() error {
 	klog.V(4).Info("BasicSyncer syncing")
 	return nil
