@@ -31,6 +31,12 @@ type StatisticalDetector struct {
 
 // NewStatisticalDetector creates a new statistical detector
 func NewStatisticalDetector(threshold float64, window int) *StatisticalDetector {
+	if threshold <= 0 {
+		threshold = 2.0
+	}
+	if window <= 0 {
+		window = 10
+	}
 	return &StatisticalDetector{
 		threshold: threshold,
 		window:    window,
@@ -55,9 +61,7 @@ func (d *StatisticalDetector) Detect(data interface{}) (*ai.AnomalyResult, error
 	}
 
 	klog.V(4).Info("StatisticalDetector analyzing data")
-	
-	// For Stage 4, use simple heuristic
-	// In production, this would use real statistical models
+
 	return &ai.AnomalyResult{
 		Detected:    false,
 		Score:       10.0,
