@@ -140,6 +140,7 @@ func main() {
 func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API) {
 	mux := http.NewServeMux()
 
+	// Health endpoints
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if checker.IsHealthy() {
 			w.WriteHeader(http.StatusOK)
@@ -160,6 +161,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		}
 	})
 
+	// Metrics endpoint
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		metricsData := metrics.GetMetrics()
 		w.Header().Set("Content-Type", "text/plain")
