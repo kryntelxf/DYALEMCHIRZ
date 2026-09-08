@@ -40,6 +40,10 @@ import (
 	"k8s.io/kubernetes/dya/pkg/impact"
 	"k8s.io/kubernetes/dya/pkg/metrics"
 	"k8s.io/kubernetes/dya/pkg/query"
+	"k8s.io/kubernetes/dya/pkg/resilience"
+	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
+	"k8s.io/kubernetes/dya/pkg/resilience/detectors"
+	"k8s.io/kubernetes/dya/pkg/resilience/planners"
 	"k8s.io/kubernetes/dya/pkg/storage"
 )
 
@@ -66,8 +70,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 4: AI Engine                                        ║")
-	fmt.Println("║   Version: 0.5.0                                            ║")
+	fmt.Println("║   Stage 5: Resilience Engine                                ║")
+	fmt.Println("║   Version: 0.6.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -127,17 +131,32 @@ func main() {
 	klog.Info("Creating AI Engine...")
 	aiEngine := ai.NewEngine()
 
-	// Register AI components
 	klog.Info("Registering AI components...")
 	aiEngine.RegisterDetector(detectors.NewStatisticalDetector(2.0, 10))
 	aiEngine.RegisterScorer(scorers.NewRiskScorer())
 	aiEngine.RegisterPredictor(predictors.NewSimplePredictor())
 
-	// Start AI Engine
 	klog.Info("Starting AI Engine...")
 	aiEngine.Start()
 	defer aiEngine.Stop()
 	klog.Info("AI Engine started successfully")
+
+	// ============================================
+	// RESILIENCE ENGINE COMPONENTS
+	// ============================================
+
+	klog.Info("Creating Resilience Engine...")
+	resilienceEngine := resilience.NewEngine()
+
+	klog.Info("Registering Resilience components...")
+	resilienceEngine.RegisterHealthChecker(&checkers.BasicChecker{})
+	resilienceEngine.RegisterFailureDetector(&detectors.BasicDetector{})
+	resilienceEngine.RegisterRecoveryPlanner(&planners.BasicPlanner{})
+
+	klog.Info("Starting Resilience Engine...")
+	resilienceEngine.Start()
+	defer resilienceEngine.Stop()
+	klog.Info("Resilience Engine started successfully")
 
 	// Load graph from storage
 	klog.Info("Loading graph from storage...")
@@ -160,6 +179,9 @@ func main() {
 	pipeline.RegisterHandler(&aiEventHandler{
 		aiEngine: aiEngine,
 	})
+	pipeline.RegisterHandler(&resilienceEventHandler{
+		resilienceEngine: resilienceEngine,
+	})
 
 	// Mark components as healthy
 	healthChecker.SetComponent("controller", true)
@@ -167,10 +189,11 @@ func main() {
 	healthChecker.SetComponent("storage", true)
 	healthChecker.SetComponent("event-pipeline", true)
 	healthChecker.SetComponent("ai-engine", true)
+	healthChecker.SetComponent("resilience-engine", true)
 	healthChecker.SetReady(true)
 
 	// Start health server
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine)
 
 	// Run controller
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -261,8 +284,6 @@ func (h *aiEventHandler) Handle(e *event.Event) error {
 	if e == nil || h.aiEngine == nil {
 		return nil
 	}
-
-	// Run anomaly detection
 	anomalies := h.aiEngine.Detect(e)
 	for _, anomaly := range anomalies {
 		if anomaly != nil && anomaly.Detected {
@@ -270,15 +291,29 @@ func (h *aiEventHandler) Handle(e *event.Event) error {
 				anomaly.Description, anomaly.Score, anomaly.Severity)
 		}
 	}
-
-	// Run risk scoring
 	riskScores := h.aiEngine.Score(e)
 	for _, score := range riskScores {
 		if score != nil {
 			klog.V(4).Infof("Risk score for asset %s: %.2f", score.AssetID, score.Score)
 		}
 	}
+	return nil
+}
 
+// resilienceEventHandler handles resilience processing
+type resilienceEventHandler struct {
+	resilienceEngine *resilience.Engine
+}
+
+func (h *resilienceEventHandler) Name() string {
+	return "resilience-event-handler"
+}
+
+func (h *resilienceEventHandler) Handle(e *event.Event) error {
+	if e == nil || h.resilienceEngine == nil {
+		return nil
+	}
+	klog.V(4).Infof("Resilience engine processing event for asset: %s", e.AssetID)
 	return nil
 }
 
@@ -287,7 +322,7 @@ func (h *aiEventHandler) Handle(e *event.Event) error {
 // ============================================
 
 // startHealthServer starts the health endpoint
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine) {
 	mux := http.NewServeMux()
 
 	// Health endpoints
@@ -414,7 +449,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 	// AI ENDPOINTS
 	// ============================================
 
-	// AI Anomaly Detection
 	mux.HandleFunc("/api/ai/anomalies", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -422,24 +456,18 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 			w.Write([]byte("missing asset parameter"))
 			return
 		}
-
-		// Get events for this asset
 		events := eventStore.GetByAsset(assetID)
 		if len(events) == 0 {
 			w.Header().Set("Content-Type", "application/json")
 			fmt.Fprintf(w, "{\"asset\": \"%s\", \"anomalies\": []}\n", assetID)
 			return
 		}
-
-		// Run AI detection on the latest event
 		latestEvent := events[len(events)-1]
 		anomalies := aiEngine.Detect(latestEvent)
-
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, "{\"asset\": \"%s\", \"anomalies\": %v}\n", assetID, anomalies)
 	})
 
-	// AI Risk Score
 	mux.HandleFunc("/api/ai/risk", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -447,20 +475,17 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 			w.Write([]byte("missing asset parameter"))
 			return
 		}
-
 		node, ok := queryAPI.GetNode(assetID)
 		if !ok {
 			w.Header().Set("Content-Type", "application/json")
 			fmt.Fprintf(w, "{\"asset\": \"%s\", \"risk\": null}\n", assetID)
 			return
 		}
-
 		scores := aiEngine.Score(node)
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, "{\"asset\": \"%s\", \"risk\": %v}\n", assetID, scores)
 	})
 
-	// AI Prediction
 	mux.HandleFunc("/api/ai/predict", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -468,23 +493,20 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 			w.Write([]byte("missing asset parameter"))
 			return
 		}
-
 		node, ok := queryAPI.GetNode(assetID)
 		if !ok {
 			w.Header().Set("Content-Type", "application/json")
 			fmt.Fprintf(w, "{\"asset\": \"%s\", \"predictions\": []}\n", assetID)
 			return
 		}
-
 		predictions := aiEngine.Predict(node)
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, "{\"asset\": \"%s\", \"predictions\": %v}\n", assetID, predictions)
 	})
 
-	// AI Health
 	mux.HandleFunc("/api/ai/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n", 
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
 			func() string {
 				if aiEngine != nil && aiEngine.IsRunning() {
 					return "healthy"
@@ -492,6 +514,91 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 				return "unhealthy"
 			}(),
 			aiEngine != nil && aiEngine.IsRunning())
+	})
+
+	// ============================================
+	// RESILIENCE ENDPOINTS
+	// ============================================
+
+	// Health check endpoint
+	mux.HandleFunc("/api/resilience/health", func(w http.ResponseWriter, r *http.Request) {
+		assetID := r.URL.Query().Get("asset")
+		if assetID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing asset parameter"))
+			return
+		}
+		node, ok := queryAPI.GetNode(assetID)
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, "{\"asset\": \"%s\", \"health\": null}\n", assetID)
+			return
+		}
+		healthStatuses := resilienceEngine.CheckHealth(node)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"asset\": \"%s\", \"health\": %v}\n", assetID, healthStatuses)
+	})
+
+	// Failure detection endpoint
+	mux.HandleFunc("/api/resilience/failures", func(w http.ResponseWriter, r *http.Request) {
+		assetID := r.URL.Query().Get("asset")
+		if assetID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing asset parameter"))
+			return
+		}
+		node, ok := queryAPI.GetNode(assetID)
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, "{\"asset\": \"%s\", \"failures\": []}\n", assetID)
+			return
+		}
+		failures := resilienceEngine.DetectFailures(node)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"asset\": \"%s\", \"failures\": %v}\n", assetID, failures)
+	})
+
+	// Recovery plan endpoint
+	mux.HandleFunc("/api/resilience/recovery", func(w http.ResponseWriter, r *http.Request) {
+		assetID := r.URL.Query().Get("asset")
+		if assetID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing asset parameter"))
+			return
+		}
+		failureType := r.URL.Query().Get("type")
+		if failureType == "" {
+			failureType = "unknown"
+		}
+		node, ok := queryAPI.GetNode(assetID)
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, "{\"asset\": \"%s\", \"recovery\": null}\n", assetID)
+			return
+		}
+		failure := &resilience.Failure{
+			AssetID:     assetID,
+			Type:        failureType,
+			Severity:    "medium",
+			Description: "Simulated failure for testing",
+			Timestamp:   time.Now(),
+		}
+		plans := resilienceEngine.PlanRecovery(node, failure)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"asset\": \"%s\", \"recovery\": %v}\n", assetID, plans)
+	})
+
+	// Resilience health endpoint
+	mux.HandleFunc("/api/resilience/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
+			func() string {
+				if resilienceEngine != nil && resilienceEngine.IsRunning() {
+					return "healthy"
+				}
+				return "unhealthy"
+			}(),
+			resilienceEngine != nil && resilienceEngine.IsRunning())
 	})
 
 	addr := fmt.Sprintf(":%d", port)
