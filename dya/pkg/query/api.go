@@ -32,26 +32,41 @@ func NewAPI(g *graph.Graph) *API {
 
 // GetNode returns a node by ID
 func (q *API) GetNode(id string) (*graph.Node, bool) {
+	if q.graph == nil {
+		return nil, false
+	}
 	return q.graph.GetNode(id)
 }
 
 // GetDependencies returns dependencies of a node
 func (q *API) GetDependencies(id string) []string {
+	if q.graph == nil {
+		return []string{}
+	}
 	return q.graph.GetDependencies(id)
 }
 
 // GetDependents returns dependents of a node
 func (q *API) GetDependents(id string) []string {
+	if q.graph == nil {
+		return []string{}
+	}
 	return q.graph.GetDependents(id)
 }
 
 // GetAllNodes returns all nodes
 func (q *API) GetAllNodes() []*graph.Node {
+	if q.graph == nil {
+		return []*graph.Node{}
+	}
 	return q.graph.GetAllNodes()
 }
 
 // GetNodesByKind returns nodes of a specific kind
 func (q *API) GetNodesByKind(kind string) []*graph.Node {
+	if q.graph == nil {
+		return []*graph.Node{}
+	}
 	result := []*graph.Node{}
 	for _, node := range q.graph.GetAllNodes() {
 		if node.Kind == kind {
@@ -63,6 +78,9 @@ func (q *API) GetNodesByKind(kind string) []*graph.Node {
 
 // GetNodesByLabel returns nodes with a specific label
 func (q *API) GetNodesByLabel(key, value string) []*graph.Node {
+	if q.graph == nil {
+		return []*graph.Node{}
+	}
 	result := []*graph.Node{}
 	for _, node := range q.graph.GetAllNodes() {
 		if node.Labels != nil && node.Labels[key] == value {
