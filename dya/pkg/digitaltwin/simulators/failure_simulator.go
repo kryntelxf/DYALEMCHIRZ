@@ -14,30 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This file is deprecated. Use basic_simulator.go instead.
 package simulators
-
-import (
-	"time"
-
-	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/dya/pkg/digitaltwin"
-)
-
-type FailureSimulator struct{}
-
-func (s *FailureSimulator) Name() string {
-	return "failure-simulator"
-}
-
-func (s *FailureSimulator) Simulate(scenario *digitaltwin.Scenario) (*digitaltwin.SimulationResult, error) {
-	klog.V(4).Info("FailureSimulator running")
-	return &digitaltwin.SimulationResult{
-		ScenarioID:      scenario.ID,
-		Status:          "completed",
-		Impact:          "medium",
-		RecoveryTime:    "5 minutes",
-		AffectedAssets:  []string{"asset-1", "asset-2"},
-		Recommendations: []string{"Restart service", "Check logs"},
-		Timestamp:       time.Now(),
-	}, nil
-}
