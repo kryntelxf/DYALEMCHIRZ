@@ -23,6 +23,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// Orchestrator manages recovery execution
 type Orchestrator struct {
 	mu         sync.RWMutex
 	plans      []Plan
@@ -32,6 +33,7 @@ type Orchestrator struct {
 	running    bool
 }
 
+// Plan defines a recovery plan
 type Plan interface {
 	GetSteps() []Step
 	GetAssetID() string
@@ -40,6 +42,7 @@ type Plan interface {
 	Name() string
 }
 
+// Step represents a recovery step
 type Step struct {
 	ID          string
 	Name        string
@@ -48,21 +51,25 @@ type Step struct {
 	Timeout     time.Duration
 }
 
+// Executor executes recovery steps
 type Executor interface {
 	Execute(step *Step) (*ExecutionResult, error)
 	Name() string
 }
 
+// Verifier verifies recovery
 type Verifier interface {
 	Verify(assetID string) (*VerificationResult, error)
 	Name() string
 }
 
+// Notifier sends notifications
 type Notifier interface {
 	Notify(message string, level string) error
 	Name() string
 }
 
+// ExecutionResult represents step execution result
 type ExecutionResult struct {
 	StepID    string    `json:"stepId"`
 	Success   bool      `json:"success"`
@@ -71,13 +78,15 @@ type ExecutionResult struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// VerificationResult represents verification result
 type VerificationResult struct {
-	AssetID string    `json:"assetId"`
-	Healthy bool      `json:"healthy"`
-	Message string    `json:"message"`
+	AssetID   string    `json:"assetId"`
+	Healthy   bool      `json:"healthy"`
+	Message   string    `json:"message"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// RecoveryStatus represents recovery status
 type RecoveryStatus struct {
 	PlanID      string    `json:"planId"`
 	Status      string    `json:"status"`
@@ -88,6 +97,7 @@ type RecoveryStatus struct {
 	Error       string    `json:"error"`
 }
 
+// NewOrchestrator creates a new orchestrator
 func NewOrchestrator() *Orchestrator {
 	return &Orchestrator{
 		plans:     make([]Plan, 0),
@@ -98,6 +108,7 @@ func NewOrchestrator() *Orchestrator {
 	}
 }
 
+// RegisterPlan registers a recovery plan
 func (o *Orchestrator) RegisterPlan(plan Plan) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -105,6 +116,7 @@ func (o *Orchestrator) RegisterPlan(plan Plan) {
 	klog.Infof("Registered recovery plan: %s", plan.Name())
 }
 
+// RegisterExecutor registers an executor
 func (o *Orchestrator) RegisterExecutor(executor Executor) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -112,6 +124,7 @@ func (o *Orchestrator) RegisterExecutor(executor Executor) {
 	klog.Infof("Registered executor: %s", executor.Name())
 }
 
+// RegisterVerifier registers a verifier
 func (o *Orchestrator) RegisterVerifier(verifier Verifier) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -119,6 +132,7 @@ func (o *Orchestrator) RegisterVerifier(verifier Verifier) {
 	klog.Infof("Registered verifier: %s", verifier.Name())
 }
 
+// RegisterNotifier registers a notifier
 func (o *Orchestrator) RegisterNotifier(notifier Notifier) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -126,6 +140,7 @@ func (o *Orchestrator) RegisterNotifier(notifier Notifier) {
 	klog.Infof("Registered notifier: %s", notifier.Name())
 }
 
+// Start starts the orchestrator
 func (o *Orchestrator) Start() {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -136,6 +151,7 @@ func (o *Orchestrator) Start() {
 	klog.Info("Recovery Orchestrator started")
 }
 
+// Stop stops the orchestrator
 func (o *Orchestrator) Stop() {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -146,7 +162,25 @@ func (o *Orchestrator) Stop() {
 	klog.Info("Recovery Orchestrator stopped")
 }
 
+// IsRunning returns whether the orchestrator is running
+func (o *Orchestrator) IsRunning() bool {
+	if o == nil {
+		return false
+	}
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+	return o.running
+}
+
+// ExecutePlan executes a recovery plan
 func (o *Orchestrator) ExecutePlan(plan Plan) *RecoveryStatus {
+	if plan == nil {
+		return &RecoveryStatus{
+			Status: "failed",
+			Error:  "plan is nil",
+		}
+	}
+
 	klog.Infof("Executing recovery plan: %s", plan.Name())
 
 	status := &RecoveryStatus{
@@ -206,6 +240,7 @@ func (o *Orchestrator) ExecutePlan(plan Plan) *RecoveryStatus {
 	return status
 }
 
+// notify sends a notification
 func (o *Orchestrator) notify(message string, level string) {
 	for _, notifier := range o.notifiers {
 		if err := notifier.Notify(message, level); err != nil {
