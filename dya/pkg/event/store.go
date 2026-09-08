@@ -30,6 +30,9 @@ type Store struct {
 
 // NewStore creates a new event store
 func NewStore(limit int) *Store {
+	if limit <= 0 {
+		limit = 1000
+	}
 	return &Store{
 		events: make([]*Event, 0),
 		limit:  limit,
@@ -38,12 +41,14 @@ func NewStore(limit int) *Store {
 
 // Add adds an event to the store
 func (s *Store) Add(event *Event) {
+	if event == nil || s == nil {
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.events = append(s.events, event)
 
-	// Trim if over limit
 	if len(s.events) > s.limit {
 		s.events = s.events[len(s.events)-s.limit:]
 	}
@@ -51,23 +56,32 @@ func (s *Store) Add(event *Event) {
 
 // GetRecent returns recent events
 func (s *Store) GetRecent(limit int) []*Event {
+	if s == nil {
+		return []*Event{}
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	if limit <= 0 || limit > len(s.events) {
 		limit = len(s.events)
 	}
+	if limit == 0 {
+		return []*Event{}
+	}
 	return s.events[len(s.events)-limit:]
 }
 
 // GetByAsset returns events for a specific asset
 func (s *Store) GetByAsset(assetID string) []*Event {
+	if s == nil || assetID == "" {
+		return []*Event{}
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	result := make([]*Event, 0)
 	for _, e := range s.events {
-		if e.AssetID == assetID {
+		if e != nil && e.AssetID == assetID {
 			result = append(result, e)
 		}
 	}
@@ -76,12 +90,15 @@ func (s *Store) GetByAsset(assetID string) []*Event {
 
 // GetByTime returns events within a time range
 func (s *Store) GetByTime(start, end time.Time) []*Event {
+	if s == nil {
+		return []*Event{}
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	result := make([]*Event, 0)
 	for _, e := range s.events {
-		if e.Timestamp.After(start) && e.Timestamp.Before(end) {
+		if e != nil && e.Timestamp.After(start) && e.Timestamp.Before(end) {
 			result = append(result, e)
 		}
 	}
@@ -90,7 +107,20 @@ func (s *Store) GetByTime(start, end time.Time) []*Event {
 
 // Count returns the number of events
 func (s *Store) Count() int {
+	if s == nil {
+		return 0
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return len(s.events)
+}
+
+// Clear removes all events
+func (s *Store) Clear() {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.events = make([]*Event, 0)
 }
