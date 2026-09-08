@@ -30,7 +30,7 @@ func (e *BasicExtractor) Name() string {
 }
 
 func (e *BasicExtractor) Extract(data interface{}) (*knowledge.Knowledge, error) {
-	klog.V(4).Info("BasicExtractor running")
+	klog.V(4).Info("BasicExtractor extracting knowledge")
 	return &knowledge.Knowledge{
 		ID:   "knowledge-1",
 		Type: "infrastructure",
