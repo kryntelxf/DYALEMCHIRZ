@@ -31,8 +31,8 @@ import (
 	"k8s.io/klog/v2"
 
 	"k8s.io/kubernetes/dya/pkg/ai"
-	"k8s.io/kubernetes/dya/pkg/ai/detectors"
-	"k8s.io/kubernetes/dya/pkg/ai/predictors"
+	aidetectors "k8s.io/kubernetes/dya/pkg/ai/detectors"
+	aipredictors "k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/event"
@@ -42,7 +42,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/query"
 	"k8s.io/kubernetes/dya/pkg/resilience"
 	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
-	"k8s.io/kubernetes/dya/pkg/resilience/detectors"
+	resdetectors "k8s.io/kubernetes/dya/pkg/resilience/detectors"
 	"k8s.io/kubernetes/dya/pkg/resilience/planners"
 	"k8s.io/kubernetes/dya/pkg/storage"
 )
@@ -77,13 +77,11 @@ func main() {
 
 	klog.Info("DYALEMCHIRZ controller starting...")
 
-	// Get Kubernetes config
 	cfg, err := getConfig()
 	if err != nil {
 		klog.Fatalf("Failed to get Kubernetes config: %v", err)
 	}
 
-	// Setup signal handling
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -96,23 +94,16 @@ func main() {
 		cancel()
 	}()
 
-	// Create health checker
 	healthChecker := health.NewChecker()
 
-	// Create and start controller
 	klog.Info("Creating Asset Graph controller...")
 	controller, err := assetgraph.NewController(cfg)
 	if err != nil {
 		klog.Fatalf("Failed to create controller: %v", err)
 	}
 
-	// Initialize storage
 	storageStore := storage.NewGraphStore(controller.KubeClient())
-
-	// Initialize impact analyzer
 	impactAnalyzer := impact.NewAnalyzer(controller.GetGraph())
-
-	// Initialize query API
 	queryAPI := query.NewAPI(controller.GetGraph())
 
 	// ============================================
@@ -132,9 +123,9 @@ func main() {
 	aiEngine := ai.NewEngine()
 
 	klog.Info("Registering AI components...")
-	aiEngine.RegisterDetector(detectors.NewStatisticalDetector(2.0, 10))
+	aiEngine.RegisterDetector(aidetectors.NewStatisticalDetector(2.0, 10))
 	aiEngine.RegisterScorer(scorers.NewRiskScorer())
-	aiEngine.RegisterPredictor(predictors.NewSimplePredictor())
+	aiEngine.RegisterPredictor(aipredictors.NewSimplePredictor())
 
 	klog.Info("Starting AI Engine...")
 	aiEngine.Start()
@@ -150,7 +141,7 @@ func main() {
 
 	klog.Info("Registering Resilience components...")
 	resilienceEngine.RegisterHealthChecker(&checkers.BasicChecker{})
-	resilienceEngine.RegisterFailureDetector(&detectors.BasicDetector{})
+	resilienceEngine.RegisterFailureDetector(&resdetectors.BasicDetector{})
 	resilienceEngine.RegisterRecoveryPlanner(&planners.BasicPlanner{})
 
 	klog.Info("Starting Resilience Engine...")
@@ -164,7 +155,7 @@ func main() {
 		klog.Warningf("Failed to load graph from storage: %v", err)
 	}
 
-	// Register event handlers to the pipeline
+	// Register event handlers
 	pipeline := controller.GetPipeline()
 	pipeline.RegisterHandler(&eventStoreHandler{
 		store:      eventStore,
@@ -201,7 +192,7 @@ func main() {
 		klog.Fatalf("Controller failed: %v", err)
 	}
 
-	// Save graph to storage before shutdown
+	// Save graph to storage
 	klog.Info("Saving graph to storage...")
 	if err := storageStore.Save(ctx, controller.GetGraph()); err != nil {
 		klog.Errorf("Failed to save graph: %v", err)
@@ -214,7 +205,6 @@ func main() {
 // EVENT HANDLERS
 // ============================================
 
-// eventStoreHandler handles event storage
 type eventStoreHandler struct {
 	store      *event.Store
 	normalizer *event.Normalizer
@@ -234,7 +224,6 @@ func (h *eventStoreHandler) Handle(e *event.Event) error {
 	return nil
 }
 
-// eventAnalyzerHandler handles event analysis
 type eventAnalyzerHandler struct {
 	analyzer *event.Analyzer
 }
@@ -254,7 +243,6 @@ func (h *eventAnalyzerHandler) Handle(e *event.Event) error {
 	return nil
 }
 
-// eventCorrelatorHandler handles event correlation
 type eventCorrelatorHandler struct {
 	correlator *event.Correlator
 }
@@ -271,7 +259,6 @@ func (h *eventCorrelatorHandler) Handle(e *event.Event) error {
 	return nil
 }
 
-// aiEventHandler handles AI processing
 type aiEventHandler struct {
 	aiEngine *ai.Engine
 }
@@ -300,7 +287,6 @@ func (h *aiEventHandler) Handle(e *event.Event) error {
 	return nil
 }
 
-// resilienceEventHandler handles resilience processing
 type resilienceEventHandler struct {
 	resilienceEngine *resilience.Engine
 }
@@ -321,7 +307,6 @@ func (h *resilienceEventHandler) Handle(e *event.Event) error {
 // HEALTH SERVER
 // ============================================
 
-// startHealthServer starts the health endpoint
 func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine) {
 	mux := http.NewServeMux()
 
@@ -388,7 +373,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"asset\": \"%s\", \"dependents\": %v}\n", assetID, deps)
 	})
 
-	// Impact analysis endpoint
 	mux.HandleFunc("/api/impact/analyze", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -413,10 +397,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"kind\": \"%s\", \"count\": %d, \"nodes\": %v}\n", kind, len(nodes), nodes)
 	})
 
-	// ============================================
-	// EVENT INTELLIGENCE ENDPOINTS
-	// ============================================
-
+	// Event endpoints
 	mux.HandleFunc("/api/events/recent", func(w http.ResponseWriter, r *http.Request) {
 		limit := 100
 		if r.URL.Query().Get("limit") != "" {
@@ -445,10 +426,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"total_events\": %d}\n", count)
 	})
 
-	// ============================================
-	// AI ENDPOINTS
-	// ============================================
-
+	// AI endpoints
 	mux.HandleFunc("/api/ai/anomalies", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -516,11 +494,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 			aiEngine != nil && aiEngine.IsRunning())
 	})
 
-	// ============================================
-	// RESILIENCE ENDPOINTS
-	// ============================================
-
-	// Health check endpoint
+	// Resilience endpoints
 	mux.HandleFunc("/api/resilience/health", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -539,7 +513,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"asset\": \"%s\", \"health\": %v}\n", assetID, healthStatuses)
 	})
 
-	// Failure detection endpoint
 	mux.HandleFunc("/api/resilience/failures", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -558,7 +531,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"asset\": \"%s\", \"failures\": %v}\n", assetID, failures)
 	})
 
-	// Recovery plan endpoint
 	mux.HandleFunc("/api/resilience/recovery", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -588,7 +560,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"asset\": \"%s\", \"recovery\": %v}\n", assetID, plans)
 	})
 
-	// Resilience health endpoint
 	mux.HandleFunc("/api/resilience/status", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
@@ -614,7 +585,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 	}
 }
 
-// getConfig returns the rest.Config
 func getConfig() (*rest.Config, error) {
 	if kubeconfig != "" {
 		return clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
