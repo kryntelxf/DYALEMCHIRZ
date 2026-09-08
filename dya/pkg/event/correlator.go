@@ -37,20 +37,22 @@ func (c *Correlator) Correlate(events []*Event) []*Event {
 	if len(events) < 2 {
 		return events
 	}
+	if c == nil {
+		return events
+	}
 
 	correlated := make([]*Event, 0)
 	seen := make(map[string]bool)
 
 	for i, event := range events {
-		if seen[event.ID] {
+		if event == nil || seen[event.ID] {
 			continue
 		}
 		seen[event.ID] = true
 		correlated = append(correlated, event)
 
-		// Find related events
 		for j := i + 1; j < len(events); j++ {
-			if seen[events[j].ID] {
+			if events[j] == nil || seen[events[j].ID] {
 				continue
 			}
 			if events[j].AssetID == event.AssetID {
@@ -60,6 +62,5 @@ func (c *Correlator) Correlate(events []*Event) []*Event {
 			}
 		}
 	}
-
 	return correlated
 }
