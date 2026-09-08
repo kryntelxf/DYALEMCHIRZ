@@ -46,7 +46,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/recovery"
 	"k8s.io/kubernetes/dya/pkg/recovery/executors"
 	"k8s.io/kubernetes/dya/pkg/recovery/notifiers"
-	"k8s.io/kubernetes/dya/pkg/recovery/verifiers"
+	recoveryverifiers "k8s.io/kubernetes/dya/pkg/recovery/verifiers"
 	"k8s.io/kubernetes/dya/pkg/resilience"
 	"k8s.io/kubernetes/dya/pkg/resilience/checkers"
 	resdetectors "k8s.io/kubernetes/dya/pkg/resilience/detectors"
@@ -55,7 +55,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/security/auditors"
 	"k8s.io/kubernetes/dya/pkg/security/detectors"
 	"k8s.io/kubernetes/dya/pkg/security/enforcers"
-	"k8s.io/kubernetes/dya/pkg/security/verifiers"
+	securityverifiers "k8s.io/kubernetes/dya/pkg/security/verifiers"
 	"k8s.io/kubernetes/dya/pkg/storage"
 )
 
@@ -156,7 +156,7 @@ func main() {
 	klog.Info("Creating Recovery Orchestrator...")
 	recoveryOrchestrator := recovery.NewOrchestrator()
 	recoveryOrchestrator.RegisterExecutor(&executors.BasicExecutor{})
-	recoveryOrchestrator.RegisterVerifier(&verifiers.BasicVerifier{})
+	recoveryOrchestrator.RegisterVerifier(&recoveryverifiers.BasicVerifier{})
 	recoveryOrchestrator.RegisterNotifier(&notifiers.BasicNotifier{})
 	recoveryOrchestrator.Start()
 	defer recoveryOrchestrator.Stop()
@@ -178,7 +178,7 @@ func main() {
 	// ============================================
 	klog.Info("Creating Security Engine...")
 	securityEngine := security.NewEngine()
-	securityEngine.RegisterVerifier(&verifiers.BasicVerifier{})
+	securityEngine.RegisterVerifier(&securityverifiers.BasicVerifier{})
 	securityEngine.RegisterEnforcer(&enforcers.BasicEnforcer{})
 	securityEngine.RegisterAuditor(&auditors.BasicAuditor{})
 	securityEngine.RegisterDetector(&detectors.BasicDetector{})
@@ -368,9 +368,7 @@ func (h *securityEventHandler) Handle(e *event.Event) error {
 	if e == nil || h.securityEngine == nil {
 		return nil
 	}
-	// Audit the event
 	h.securityEngine.Audit(e)
-	// Detect anomalies
 	anomalies := h.securityEngine.Detect(e)
 	for _, anomaly := range anomalies {
 		if anomaly != nil {
@@ -387,7 +385,6 @@ func (h *securityEventHandler) Handle(e *event.Event) error {
 func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine) {
 	mux := http.NewServeMux()
 
-	// Health endpoints
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if checker.IsHealthy() {
 			w.WriteHeader(http.StatusOK)
@@ -408,7 +405,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		}
 	})
 
-	// Metrics
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		metricsData := metrics.GetMetrics()
 		w.Header().Set("Content-Type", "text/plain")
@@ -450,7 +446,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"asset\": \"%s\", \"dependents\": %v}\n", assetID, deps)
 	})
 
-	// Impact
 	mux.HandleFunc("/api/impact/analyze", func(w http.ResponseWriter, r *http.Request) {
 		assetID := r.URL.Query().Get("asset")
 		if assetID == "" {
@@ -730,11 +725,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 			digitalTwinEngine != nil && digitalTwinEngine.IsRunning())
 	})
 
-	// ============================================
-	// SECURITY ENDPOINTS
-	// ============================================
-
-	// Security verify
+	// Security endpoints
 	mux.HandleFunc("/api/security/verify", func(w http.ResponseWriter, r *http.Request) {
 		identity := r.URL.Query().Get("identity")
 		if identity == "" {
@@ -745,7 +736,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"identity\": \"%s\", \"results\": %v}\n", identity, results)
 	})
 
-	// Security enforce
 	mux.HandleFunc("/api/security/enforce", func(w http.ResponseWriter, r *http.Request) {
 		policy := r.URL.Query().Get("policy")
 		if policy == "" {
@@ -760,7 +750,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"policy\": \"%s\", \"results\": %v}\n", policy, results)
 	})
 
-	// Security anomalies
 	mux.HandleFunc("/api/security/anomalies", func(w http.ResponseWriter, r *http.Request) {
 		activity := r.URL.Query().Get("activity")
 		if activity == "" {
@@ -771,7 +760,6 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		fmt.Fprintf(w, "{\"activity\": \"%s\", \"anomalies\": %v}\n", activity, anomalies)
 	})
 
-	// Security status
 	mux.HandleFunc("/api/security/status", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
