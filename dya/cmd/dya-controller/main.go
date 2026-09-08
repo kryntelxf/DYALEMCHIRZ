@@ -32,7 +32,10 @@ import (
 
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/health"
+	"k8s.io/kubernetes/dya/pkg/impact"
 	"k8s.io/kubernetes/dya/pkg/metrics"
+	"k8s.io/kubernetes/dya/pkg/query"
+	"k8s.io/kubernetes/dya/pkg/storage"
 )
 
 var (
@@ -58,8 +61,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 1: Real Core Foundation                             ║")
-	fmt.Println("║   Version: 0.2.0                                            ║")
+	fmt.Println("║   Stage 2: Asset Graph Enhancement                          ║")
+	fmt.Println("║   Version: 0.3.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -94,13 +97,29 @@ func main() {
 		klog.Fatalf("Failed to create controller: %v", err)
 	}
 
+	// Initialize storage
+	storageStore := storage.NewGraphStore(controller.KubeClient())
+
+	// Initialize impact analyzer
+	impactAnalyzer := impact.NewAnalyzer(controller.GetGraph())
+
+	// Initialize query API
+	queryAPI := query.NewAPI(controller.GetGraph())
+
+	// Load graph from storage
+	klog.Info("Loading graph from storage...")
+	if _, err := storageStore.Load(ctx); err != nil {
+		klog.Warningf("Failed to load graph from storage: %v", err)
+	}
+
 	// Mark components as healthy
 	healthChecker.SetComponent("controller", true)
 	healthChecker.SetComponent("kubernetes-api", true)
+	healthChecker.SetComponent("storage", true)
 	healthChecker.SetReady(true)
 
 	// Start health server
-	go startHealthServer(healthPort, healthChecker)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI)
 
 	// Run controller
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -108,11 +127,17 @@ func main() {
 		klog.Fatalf("Controller failed: %v", err)
 	}
 
+	// Save graph to storage before shutdown
+	klog.Info("Saving graph to storage...")
+	if err := storageStore.Save(ctx, controller.GetGraph()); err != nil {
+		klog.Errorf("Failed to save graph: %v", err)
+	}
+
 	klog.Info("Controller shutdown complete")
 }
 
 // startHealthServer starts the health endpoint
-func startHealthServer(port int, checker *health.Checker) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -143,6 +168,62 @@ func startHealthServer(port int, checker *health.Checker) {
 			fmt.Fprintf(w, "# TYPE %s gauge\n", name)
 			fmt.Fprintf(w, "%s %f\n", name, value)
 		}
+	})
+
+	// Graph query endpoints
+	mux.HandleFunc("/api/graph/nodes", func(w http.ResponseWriter, r *http.Request) {
+		nodes := queryAPI.GetAllNodes()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"nodes\": %d, \"data\": %v}\n", len(nodes), nodes)
+	})
+
+	mux.HandleFunc("/api/graph/dependencies", func(w http.ResponseWriter, r *http.Request) {
+		assetID := r.URL.Query().Get("asset")
+		if assetID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing asset parameter"))
+			return
+		}
+		deps := queryAPI.GetDependencies(assetID)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"asset\": \"%s\", \"dependencies\": %v}\n", assetID, deps)
+	})
+
+	mux.HandleFunc("/api/graph/dependents", func(w http.ResponseWriter, r *http.Request) {
+		assetID := r.URL.Query().Get("asset")
+		if assetID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing asset parameter"))
+			return
+		}
+		deps := queryAPI.GetDependents(assetID)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"asset\": \"%s\", \"dependents\": %v}\n", assetID, deps)
+	})
+
+	// Impact analysis endpoint
+	mux.HandleFunc("/api/impact/analyze", func(w http.ResponseWriter, r *http.Request) {
+		assetID := r.URL.Query().Get("asset")
+		if assetID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing asset parameter"))
+			return
+		}
+		result := impactAnalyzer.Analyze(assetID)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"asset\": \"%s\", \"impact\": %v}\n", assetID, result)
+	})
+
+	mux.HandleFunc("/api/nodes/by-kind", func(w http.ResponseWriter, r *http.Request) {
+		kind := r.URL.Query().Get("kind")
+		if kind == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing kind parameter"))
+			return
+		}
+		nodes := queryAPI.GetNodesByKind(kind)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"kind\": \"%s\", \"count\": %d, \"nodes\": %v}\n", kind, len(nodes), nodes)
 	})
 
 	addr := fmt.Sprintf(":%d", port)
