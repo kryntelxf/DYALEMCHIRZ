@@ -24,11 +24,11 @@ import (
 )
 
 type Engine struct {
-	mu               sync.RWMutex
-	healthCheckers   []HealthChecker
+	mu          sync.RWMutex
+	healthCheckers []HealthChecker
 	failureDetectors []FailureDetector
 	recoveryPlanners []RecoveryPlanner
-	running          bool
+	running     bool
 }
 
 type HealthChecker interface {
@@ -72,10 +72,10 @@ type RecoveryPlan struct {
 
 func NewEngine() *Engine {
 	return &Engine{
-		healthCheckers:   make([]HealthChecker, 0),
+		healthCheckers:  make([]HealthChecker, 0),
 		failureDetectors: make([]FailureDetector, 0),
 		recoveryPlanners: make([]RecoveryPlanner, 0),
-		running:          false,
+		running:         false,
 	}
 }
 
