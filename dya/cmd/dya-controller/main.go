@@ -35,6 +35,9 @@ import (
 	aipredictors "k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
+	"k8s.io/kubernetes/dya/pkg/digitaltwin"
+	"k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
+	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
 	"k8s.io/kubernetes/dya/pkg/event"
 	"k8s.io/kubernetes/dya/pkg/health"
 	"k8s.io/kubernetes/dya/pkg/impact"
@@ -74,8 +77,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 6: Recovery Orchestrator                            ║")
-	fmt.Println("║   Version: 0.7.0                                            ║")
+	fmt.Println("║   Stage 7: Digital Twin                                     ║")
+	fmt.Println("║   Version: 0.8.0                                            ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -110,13 +113,17 @@ func main() {
 	impactAnalyzer := impact.NewAnalyzer(controller.GetGraph())
 	queryAPI := query.NewAPI(controller.GetGraph())
 
+	// ============================================
 	// EVENT INTELLIGENCE
+	// ============================================
 	eventStore := event.NewStore(10000)
 	normalizer := event.NewNormalizer()
 	correlator := event.NewCorrelator(5 * time.Minute)
 	analyzer := event.NewAnalyzer(10)
 
+	// ============================================
 	// AI ENGINE
+	// ============================================
 	klog.Info("Creating AI Engine...")
 	aiEngine := ai.NewEngine()
 	aiEngine.RegisterDetector(aidetectors.NewStatisticalDetector(2.0, 10))
@@ -126,7 +133,9 @@ func main() {
 	defer aiEngine.Stop()
 	klog.Info("AI Engine started successfully")
 
+	// ============================================
 	// RESILIENCE ENGINE
+	// ============================================
 	klog.Info("Creating Resilience Engine...")
 	resilienceEngine := resilience.NewEngine()
 	resilienceEngine.RegisterHealthChecker(&checkers.BasicChecker{})
@@ -136,7 +145,9 @@ func main() {
 	defer resilienceEngine.Stop()
 	klog.Info("Resilience Engine started successfully")
 
+	// ============================================
 	// RECOVERY ORCHESTRATOR
+	// ============================================
 	klog.Info("Creating Recovery Orchestrator...")
 	recoveryOrchestrator := recovery.NewOrchestrator()
 	recoveryOrchestrator.RegisterExecutor(&executors.BasicExecutor{})
@@ -146,13 +157,28 @@ func main() {
 	defer recoveryOrchestrator.Stop()
 	klog.Info("Recovery Orchestrator started successfully")
 
-	// Load graph
+	// ============================================
+	// DIGITAL TWIN
+	// ============================================
+	klog.Info("Creating Digital Twin Engine...")
+	digitalTwinEngine := digitaltwin.NewEngine()
+	digitalTwinEngine.RegisterSimulator(&simulators.BasicSimulator{})
+	digitalTwinEngine.RegisterAnalyzer(&analyzers.BasicAnalyzer{})
+	digitalTwinEngine.Start()
+	defer digitalTwinEngine.Stop()
+	klog.Info("Digital Twin Engine started successfully")
+
+	// ============================================
+	// LOAD GRAPH
+	// ============================================
 	klog.Info("Loading graph from storage...")
 	if _, err := storageStore.Load(ctx); err != nil {
 		klog.Warningf("Failed to load graph from storage: %v", err)
 	}
 
-	// Register event handlers
+	// ============================================
+	// REGISTER EVENT HANDLERS
+	// ============================================
 	pipeline := controller.GetPipeline()
 	pipeline.RegisterHandler(&eventStoreHandler{store: eventStore, normalizer: normalizer})
 	pipeline.RegisterHandler(&eventAnalyzerHandler{analyzer: analyzer})
@@ -161,7 +187,9 @@ func main() {
 	pipeline.RegisterHandler(&resilienceEventHandler{resilienceEngine: resilienceEngine})
 	pipeline.RegisterHandler(&recoveryEventHandler{recoveryOrchestrator: recoveryOrchestrator})
 
-	// Health checks
+	// ============================================
+	// HEALTH CHECKS
+	// ============================================
 	healthChecker.SetComponent("controller", true)
 	healthChecker.SetComponent("kubernetes-api", true)
 	healthChecker.SetComponent("storage", true)
@@ -169,18 +197,25 @@ func main() {
 	healthChecker.SetComponent("ai-engine", true)
 	healthChecker.SetComponent("resilience-engine", true)
 	healthChecker.SetComponent("recovery-orchestrator", true)
+	healthChecker.SetComponent("digital-twin", true)
 	healthChecker.SetReady(true)
 
-	// Start health server
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator)
+	// ============================================
+	// START HEALTH SERVER
+	// ============================================
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine)
 
-	// Run controller
+	// ============================================
+	// RUN CONTROLLER
+	// ============================================
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
 	if err := controller.Run(ctx, workers); err != nil {
 		klog.Fatalf("Controller failed: %v", err)
 	}
 
-	// Save graph
+	// ============================================
+	// SAVE GRAPH
+	// ============================================
 	klog.Info("Saving graph to storage...")
 	if err := storageStore.Save(ctx, controller.GetGraph()); err != nil {
 		klog.Errorf("Failed to save graph: %v", err)
@@ -305,7 +340,7 @@ func (h *recoveryEventHandler) Handle(e *event.Event) error {
 // HEALTH SERVER
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine) {
 	mux := http.NewServeMux()
 
 	// Health endpoints
@@ -611,6 +646,49 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 				return "unhealthy"
 			}(),
 			recoveryOrchestrator != nil && recoveryOrchestrator.IsRunning())
+	})
+
+	// ============================================
+	// DIGITAL TWIN ENDPOINTS
+	// ============================================
+
+	// Digital Twin simulation
+	mux.HandleFunc("/api/digitaltwin/simulate", func(w http.ResponseWriter, r *http.Request) {
+		scenarioName := r.URL.Query().Get("name")
+		if scenarioName == "" {
+			scenarioName = "default-scenario"
+		}
+
+		scenario := &digitaltwin.Scenario{
+			ID:          "scenario-" + time.Now().Format("20060102150405"),
+			Name:        scenarioName,
+			Description: "Simulation scenario",
+			Changes: map[string]interface{}{
+				"type": "test",
+			},
+			Parameters: map[string]string{
+				"source": "api",
+			},
+		}
+
+		results := digitalTwinEngine.Simulate(scenario)
+		analyses := digitalTwinEngine.Analyze(results)
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"scenario\": \"%s\", \"results\": %v, \"analyses\": %v}\n", scenario.ID, results, analyses)
+	})
+
+	// Digital Twin status
+	mux.HandleFunc("/api/digitaltwin/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
+			func() string {
+				if digitalTwinEngine != nil && digitalTwinEngine.IsRunning() {
+					return "healthy"
+				}
+				return "unhealthy"
+			}(),
+			digitalTwinEngine != nil && digitalTwinEngine.IsRunning())
 	})
 
 	addr := fmt.Sprintf(":%d", port)
