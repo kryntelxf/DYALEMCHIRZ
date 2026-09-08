@@ -14,25 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This file is deprecated. Use basic_analyzer.go instead.
 package analyzers
-
-import (
-	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/dya/pkg/digitaltwin"
-)
-
-type ImpactAnalyzer struct{}
-
-func (a *ImpactAnalyzer) Name() string {
-	return "impact-analyzer"
-}
-
-func (a *ImpactAnalyzer) Analyze(asset interface{}) (*digitaltwin.ImpactResult, error) {
-	klog.V(4).Info("ImpactAnalyzer running")
-	return &digitaltwin.ImpactResult{
-		AssetID:      "unknown",
-		ImpactLevel:  "low",
-		Dependencies: []string{},
-		Criticality:  "medium",
-	}, nil
-}
