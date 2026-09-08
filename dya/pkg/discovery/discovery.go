@@ -101,7 +101,6 @@ func (d *Discoverer) DiscoverPods(ctx context.Context) error {
 			continue
 		}
 
-		// Add relationship: Pod -> Node
 		if pod.Spec.NodeName != "" {
 			nodeID := fmt.Sprintf("node/%s", pod.Spec.NodeName)
 			if err := d.graph.AddEdge(assetID, nodeID, "scheduled-on", fmt.Sprintf("Pod %s scheduled on node %s", pod.Name, pod.Spec.NodeName)); err != nil {
@@ -165,25 +164,17 @@ func (d *Discoverer) DiscoverDeployments(ctx context.Context) error {
 			Kind:      "Deployment",
 			Labels:    dep.Labels,
 			Properties: map[string]string{
-				"replicas":   fmt.Sprintf("%d", replicas),
-				"available":  fmt.Sprintf("%d", dep.Status.AvailableReplicas),
-				"ready":      fmt.Sprintf("%d", dep.Status.ReadyReplicas),
-				"updated":    fmt.Sprintf("%d", dep.Status.UpdatedReplicas),
-				"created":    dep.CreationTimestamp.Format("2006-01-02T15:04:05Z"),
+				"replicas":  fmt.Sprintf("%d", replicas),
+				"available": fmt.Sprintf("%d", dep.Status.AvailableReplicas),
+				"ready":     fmt.Sprintf("%d", dep.Status.ReadyReplicas),
+				"updated":   fmt.Sprintf("%d", dep.Status.UpdatedReplicas),
+				"created":   dep.CreationTimestamp.Format("2006-01-02T15:04:05Z"),
 			},
 		}
 
 		if err := d.graph.AddNode(depNode); err != nil {
 			klog.Errorf("Failed to add deployment %s/%s: %v", dep.Namespace, dep.Name, err)
 			continue
-		}
-
-		// Add relationship: Deployment -> Pods (through label selector)
-		// This is a simplified relationship - in production, we would match labels
-		if dep.Spec.Selector != nil {
-			// For Stage 2, we add a generic relationship
-			selector := fmt.Sprintf("%v", dep.Spec.Selector.MatchLabels)
-			klog.V(4).Infof("Deployment %s/%s selector: %s", dep.Namespace, dep.Name, selector)
 		}
 	}
 
