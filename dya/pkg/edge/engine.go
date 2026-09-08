@@ -24,15 +24,15 @@ import (
 )
 
 type Engine struct {
-	mu            sync.RWMutex
-	handlers      []LocalHandler
-	syncers       []Syncer
-	enforcers     []LocalEnforcer
-	buffers       []Buffer
-	running       bool
+	mu          sync.RWMutex
+	handlers    []Handler
+	syncers     []Syncer
+	enforcers   []Enforcer
+	buffers     []Buffer
+	running     bool
 }
 
-type LocalHandler interface {
+type Handler interface {
 	Handle(event interface{}) error
 	Name() string
 }
@@ -42,7 +42,7 @@ type Syncer interface {
 	Name() string
 }
 
-type LocalEnforcer interface {
+type Enforcer interface {
 	Enforce(policy interface{}) error
 	Name() string
 }
@@ -54,7 +54,7 @@ type Buffer interface {
 }
 
 type EdgeStatus struct {
-	Mode          string    `json:"mode"` // online, offline, degraded
+	Mode          string    `json:"mode"`
 	LastSync      time.Time `json:"lastSync"`
 	PendingEvents int       `json:"pendingEvents"`
 	Connected     bool      `json:"connected"`
@@ -62,40 +62,40 @@ type EdgeStatus struct {
 
 func NewEngine() *Engine {
 	return &Engine{
-		handlers:  make([]LocalHandler, 0),
+		handlers:  make([]Handler, 0),
 		syncers:   make([]Syncer, 0),
-		enforcers: make([]LocalEnforcer, 0),
+		enforcers: make([]Enforcer, 0),
 		buffers:   make([]Buffer, 0),
 		running:   false,
 	}
 }
 
-func (e *Engine) RegisterHandler(handler LocalHandler) {
+func (e *Engine) RegisterHandler(handler Handler) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.handlers = append(e.handlers, handler)
-	klog.Infof("Registered local handler: %s", handler.Name())
+	klog.Infof("Registered edge handler: %s", handler.Name())
 }
 
 func (e *Engine) RegisterSyncer(syncer Syncer) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.syncers = append(e.syncers, syncer)
-	klog.Infof("Registered syncer: %s", syncer.Name())
+	klog.Infof("Registered edge syncer: %s", syncer.Name())
 }
 
-func (e *Engine) RegisterEnforcer(enforcer LocalEnforcer) {
+func (e *Engine) RegisterEnforcer(enforcer Enforcer) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.enforcers = append(e.enforcers, enforcer)
-	klog.Infof("Registered local enforcer: %s", enforcer.Name())
+	klog.Infof("Registered edge enforcer: %s", enforcer.Name())
 }
 
 func (e *Engine) RegisterBuffer(buffer Buffer) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.buffers = append(e.buffers, buffer)
-	klog.Infof("Registered buffer: %s", buffer.Name())
+	klog.Infof("Registered edge buffer: %s", buffer.Name())
 }
 
 func (e *Engine) Start() {
@@ -124,12 +124,12 @@ func (e *Engine) IsRunning() bool {
 	return e.running
 }
 
-func (e *Engine) HandleLocalEvent(event interface{}) error {
+func (e *Engine) HandleLocal(event interface{}) error {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	for _, handler := range e.handlers {
 		if err := handler.Handle(event); err != nil {
-			klog.Errorf("Local handler %s failed: %v", handler.Name(), err)
+			klog.Errorf("Edge handler %s failed: %v", handler.Name(), err)
 			return err
 		}
 	}
@@ -141,17 +141,17 @@ func (e *Engine) Sync() {
 	defer e.mu.RUnlock()
 	for _, syncer := range e.syncers {
 		if err := syncer.Sync(); err != nil {
-			klog.Errorf("Syncer %s failed: %v", syncer.Name(), err)
+			klog.Errorf("Edge syncer %s failed: %v", syncer.Name(), err)
 		}
 	}
 }
 
-func (e *Engine) EnforceLocalPolicy(policy interface{}) error {
+func (e *Engine) EnforceLocal(policy interface{}) error {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	for _, enforcer := range e.enforcers {
 		if err := enforcer.Enforce(policy); err != nil {
-			klog.Errorf("Local enforcer %s failed: %v", enforcer.Name(), err)
+			klog.Errorf("Edge enforcer %s failed: %v", enforcer.Name(), err)
 			return err
 		}
 	}
@@ -163,7 +163,7 @@ func (e *Engine) StoreBuffer(data interface{}) error {
 	defer e.mu.RUnlock()
 	for _, buffer := range e.buffers {
 		if err := buffer.Store(data); err != nil {
-			klog.Errorf("Buffer %s failed to store: %v", buffer.Name(), err)
+			klog.Errorf("Edge buffer %s failed: %v", buffer.Name(), err)
 			return err
 		}
 	}
@@ -177,7 +177,7 @@ func (e *Engine) FlushBuffers() [][]interface{} {
 	for _, buffer := range e.buffers {
 		data, err := buffer.Flush()
 		if err != nil {
-			klog.Errorf("Buffer %s failed to flush: %v", buffer.Name(), err)
+			klog.Errorf("Edge buffer %s failed: %v", buffer.Name(), err)
 			continue
 		}
 		if len(data) > 0 {
