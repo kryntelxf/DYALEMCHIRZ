@@ -38,9 +38,18 @@ import (
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
+	"k8s.io/kubernetes/dya/pkg/edge"
+	"k8s.io/kubernetes/dya/pkg/edge/buffers"
+	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
+	edgehandlers "k8s.io/kubernetes/dya/pkg/edge/handlers"
+	edgesyncers "k8s.io/kubernetes/dya/pkg/edge/syncers"
 	"k8s.io/kubernetes/dya/pkg/event"
 	"k8s.io/kubernetes/dya/pkg/health"
 	"k8s.io/kubernetes/dya/pkg/impact"
+	"k8s.io/kubernetes/dya/pkg/knowledge"
+	"k8s.io/kubernetes/dya/pkg/knowledge/analyzers"
+	"k8s.io/kubernetes/dya/pkg/knowledge/extractors"
+	"k8s.io/kubernetes/dya/pkg/knowledge/queriers"
 	"k8s.io/kubernetes/dya/pkg/metrics"
 	"k8s.io/kubernetes/dya/pkg/query"
 	"k8s.io/kubernetes/dya/pkg/recovery"
@@ -82,8 +91,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 8: Security Intelligence                            ║")
-	fmt.Println("║   Version: 0.9.0                                            ║")
+	fmt.Println("║   Stage 10: Knowledge Graph                                 ║")
+	fmt.Println("║   Version: 0.11.0                                           ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -187,6 +196,31 @@ func main() {
 	klog.Info("Security Engine started successfully")
 
 	// ============================================
+	// EDGE FABRIC
+	// ============================================
+	klog.Info("Creating Edge Engine...")
+	edgeEngine := edge.NewEngine()
+	edgeEngine.RegisterHandler(&edgehandlers.BasicHandler{})
+	edgeEngine.RegisterSyncer(&edgesyncers.BasicSyncer{})
+	edgeEngine.RegisterEnforcer(&edgeenforcers.BasicEnforcer{})
+	edgeEngine.RegisterBuffer(buffers.NewBasicBuffer())
+	edgeEngine.Start()
+	defer edgeEngine.Stop()
+	klog.Info("Edge Engine started successfully")
+
+	// ============================================
+	// KNOWLEDGE ENGINE
+	// ============================================
+	klog.Info("Creating Knowledge Engine...")
+	knowledgeEngine := knowledge.NewEngine()
+	knowledgeEngine.RegisterExtractor(&extractors.BasicExtractor{})
+	knowledgeEngine.RegisterAnalyzer(&analyzers.BasicAnalyzer{})
+	knowledgeEngine.RegisterQuerier(&queriers.BasicQuerier{})
+	knowledgeEngine.Start()
+	defer knowledgeEngine.Stop()
+	klog.Info("Knowledge Engine started successfully")
+
+	// ============================================
 	// LOAD GRAPH
 	// ============================================
 	klog.Info("Loading graph from storage...")
@@ -205,6 +239,7 @@ func main() {
 	pipeline.RegisterHandler(&resilienceEventHandler{resilienceEngine: resilienceEngine})
 	pipeline.RegisterHandler(&recoveryEventHandler{recoveryOrchestrator: recoveryOrchestrator})
 	pipeline.RegisterHandler(&securityEventHandler{securityEngine: securityEngine})
+	pipeline.RegisterHandler(&knowledgeEventHandler{knowledgeEngine: knowledgeEngine})
 
 	// ============================================
 	// HEALTH CHECKS
@@ -218,12 +253,14 @@ func main() {
 	healthChecker.SetComponent("recovery-orchestrator", true)
 	healthChecker.SetComponent("digital-twin", true)
 	healthChecker.SetComponent("security-engine", true)
+	healthChecker.SetComponent("edge-engine", true)
+	healthChecker.SetComponent("knowledge-engine", true)
 	healthChecker.SetReady(true)
 
 	// ============================================
 	// START HEALTH SERVER
 	// ============================================
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine)
 
 	// ============================================
 	// RUN CONTROLLER
@@ -378,11 +415,32 @@ func (h *securityEventHandler) Handle(e *event.Event) error {
 	return nil
 }
 
+type knowledgeEventHandler struct {
+	knowledgeEngine *knowledge.Engine
+}
+
+func (h *knowledgeEventHandler) Name() string {
+	return "knowledge-event-handler"
+}
+
+func (h *knowledgeEventHandler) Handle(e *event.Event) error {
+	if e == nil || h.knowledgeEngine == nil {
+		return nil
+	}
+	knowledge := h.knowledgeEngine.Extract(e)
+	for _, k := range knowledge {
+		if k != nil {
+			klog.V(4).Infof("Extracted knowledge: %s", k.ID)
+		}
+	}
+	return nil
+}
+
 // ============================================
 // HEALTH SERVER
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -770,6 +828,86 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 				return "unhealthy"
 			}(),
 			securityEngine != nil && securityEngine.IsRunning())
+	})
+
+	// Edge endpoints
+	mux.HandleFunc("/api/edge/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
+			func() string {
+				if edgeEngine != nil && edgeEngine.IsRunning() {
+					return "healthy"
+				}
+				return "unhealthy"
+			}(),
+			edgeEngine != nil && edgeEngine.IsRunning())
+	})
+
+	mux.HandleFunc("/api/edge/sync", func(w http.ResponseWriter, r *http.Request) {
+		if edgeEngine != nil {
+			edgeEngine.Sync()
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("sync triggered"))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("edge engine not available"))
+		}
+	})
+
+	mux.HandleFunc("/api/edge/buffer", func(w http.ResponseWriter, r *http.Request) {
+		if edgeEngine == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("edge engine not available"))
+			return
+		}
+		results := edgeEngine.FlushBuffers()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"buffers\": %v}\n", results)
+	})
+
+	// Knowledge endpoints
+	mux.HandleFunc("/api/knowledge/extract", func(w http.ResponseWriter, r *http.Request) {
+		if knowledgeEngine == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("knowledge engine not available"))
+			return
+		}
+		data := r.URL.Query().Get("data")
+		if data == "" {
+			data = "default"
+		}
+		knowledge := knowledgeEngine.Extract(data)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"knowledge\": %v}\n", knowledge)
+	})
+
+	mux.HandleFunc("/api/knowledge/query", func(w http.ResponseWriter, r *http.Request) {
+		if knowledgeEngine == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("knowledge engine not available"))
+			return
+		}
+		query := r.URL.Query().Get("q")
+		if query == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing query parameter"))
+			return
+		}
+		results := knowledgeEngine.Query(query)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"query\": \"%s\", \"results\": %v}\n", query, results)
+	})
+
+	mux.HandleFunc("/api/knowledge/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
+			func() string {
+				if knowledgeEngine != nil && knowledgeEngine.IsRunning() {
+					return "healthy"
+				}
+				return "unhealthy"
+			}(),
+			knowledgeEngine != nil && knowledgeEngine.IsRunning())
 	})
 
 	addr := fmt.Sprintf(":%d", port)
