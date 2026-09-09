@@ -44,7 +44,7 @@ import (
 	edgehandlers "k8s.io/kubernetes/dya/pkg/edge/handlers"
 	edgesyncers "k8s.io/kubernetes/dya/pkg/edge/syncers"
 	"k8s.io/kubernetes/dya/pkg/enterprise"
-	"k8s.io/kubernetes/dya/pkg/enterprise/auditors"
+	enterpriseauditors "k8s.io/kubernetes/dya/pkg/enterprise/auditors"
 	enterprisehandlers "k8s.io/kubernetes/dya/pkg/enterprise/handlers"
 	"k8s.io/kubernetes/dya/pkg/event"
 	"k8s.io/kubernetes/dya/pkg/health"
@@ -64,7 +64,7 @@ import (
 	resdetectors "k8s.io/kubernetes/dya/pkg/resilience/detectors"
 	"k8s.io/kubernetes/dya/pkg/resilience/planners"
 	"k8s.io/kubernetes/dya/pkg/security"
-	"k8s.io/kubernetes/dya/pkg/security/auditors"
+	securityauditors "k8s.io/kubernetes/dya/pkg/security/auditors"
 	"k8s.io/kubernetes/dya/pkg/security/detectors"
 	"k8s.io/kubernetes/dya/pkg/security/enforcers"
 	securityverifiers "k8s.io/kubernetes/dya/pkg/security/verifiers"
@@ -180,7 +180,7 @@ func main() {
 	securityEngine := security.NewEngine()
 	securityEngine.RegisterVerifier(&securityverifiers.BasicVerifier{})
 	securityEngine.RegisterEnforcer(&enforcers.BasicEnforcer{})
-	securityEngine.RegisterAuditor(&auditors.BasicAuditor{})
+	securityEngine.RegisterAuditor(&securityauditors.BasicAuditor{})
 	securityEngine.RegisterDetector(&detectors.BasicDetector{})
 	securityEngine.Start()
 	defer securityEngine.Stop()
@@ -210,10 +210,9 @@ func main() {
 	// ENTERPRISE ENGINE
 	klog.Info("Creating Enterprise Engine...")
 	enterpriseEngine := enterprise.NewEngine()
-	enterpriseEngine.RegisterAuditor(&auditors.BasicAuditor{})
+	enterpriseEngine.RegisterAuditor(&enterpriseauditors.BasicAuditor{})
 	enterpriseEngine.RegisterAPIHandler(&enterprisehandlers.BasicHandler{})
-	
-	// Register sample tenant
+
 	enterpriseEngine.RegisterTenant(enterprise.Tenant{
 		ID:          "tenant-1",
 		Name:        "Default Tenant",
@@ -221,16 +220,14 @@ func main() {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	})
-	
-	// Register sample role
+
 	enterpriseEngine.RegisterRole(enterprise.Role{
 		ID:          "role-1",
 		Name:        "Admin",
 		Permissions: []string{"read", "write", "delete", "admin"},
 		CreatedAt:   time.Now(),
 	})
-	
-	// Register sample organization
+
 	enterpriseEngine.RegisterOrganization(enterprise.Organization{
 		ID:          "org-1",
 		Name:        "Default Organization",
@@ -238,7 +235,7 @@ func main() {
 		Members:     []string{"admin"},
 		CreatedAt:   time.Now(),
 	})
-	
+
 	enterpriseEngine.Start()
 	defer enterpriseEngine.Stop()
 	klog.Info("Enterprise Engine started successfully")
