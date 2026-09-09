@@ -20,24 +20,41 @@ import (
 	"time"
 )
 
-type GoSDK struct{}
-
-func NewGoSDK() interface{} {
-	return struct {
-		ID          string
-		Name        string
-		Version     string
-		Language    string
-		Repository  string
-		Description string
-		CreatedAt   time.Time
-	}{
-		ID:          "sdk-go",
-		Name:        "DYALEMCHIRZ Go SDK",
-		Version:     "1.0.0",
-		Language:    "go",
-		Repository:  "https://github.com/kryntelxf/dya-sdk-go",
-		Description: "Go SDK for DYALEMCHIRZ platform",
-		CreatedAt:   time.Now(),
+func GetOfficialSDKs() []interface{} {
+	return []interface{}{
+		struct {
+			ID          string
+			Name        string
+			Language    string
+			Version     string
+			Repository  string
+			Description string
+			CreatedAt   time.Time
+		}{
+			ID:          "sdk-go",
+			Name:        "Go SDK",
+			Language:    "go",
+			Version:     "1.0.0",
+			Repository:  "https://github.com/kryntelxf/dya-sdk-go",
+			Description: "Go SDK for DYALEMCHIRZ platform",
+			CreatedAt:   time.Now(),
+		},
+		struct {
+			ID          string
+			Name        string
+			Language    string
+			Version     string
+			Repository  string
+			Description string
+			CreatedAt   time.Time
+		}{
+			ID:          "sdk-python",
+			Name:        "Python SDK",
+			Language:    "python",
+			Version:     "1.0.0",
+			Repository:  "https://github.com/kryntelxf/dya-sdk-python",
+			Description: "Python SDK for DYALEMCHIRZ platform",
+			CreatedAt:   time.Now(),
+		},
 	}
 }
