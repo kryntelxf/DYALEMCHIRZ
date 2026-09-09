@@ -1,0 +1,12 @@
+apiVersion: v2
+name: dyalemchirz
+description: AI-Native Infrastructure Resilience Operating Platform
+type: application
+version: 0.17.0
+appVersion: "0.17.0"
+home: https://github.com/kryntelxf/DYALEMCHIRZ
+sources:
+  - https://github.com/kryntelxf/DYALEMCHIRZ
+maintainers:
+  - name: DYALEMCHIRZ Team
+    email: team@dyalemchirz.com
