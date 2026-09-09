@@ -885,11 +885,4 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 	})
 
 	mux.HandleFunc("/api/nodes/by-kind", func(w http.ResponseWriter, r *http.Request) {
-		kind := r.URL.Query().Get("kind")
-		if kind == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing kind parameter"))
-			return
-		}
-		nodes := queryAPI.GetNodesByKind(kind)
-		w.Header().Set("Content-Type", "application/json")
+		kind := r.URL.Query().Get("kind
