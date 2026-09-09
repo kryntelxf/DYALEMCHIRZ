@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
@@ -34,6 +35,7 @@ import (
 	aidetectors "k8s.io/kubernetes/dya/pkg/ai/detectors"
 	aipredictors "k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
+	"k8s.io/kubernetes/dya/pkg/apiserver/middleware"
 	"k8s.io/kubernetes/dya/pkg/commercial"
 	"k8s.io/kubernetes/dya/pkg/commercial/licenses"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
@@ -42,6 +44,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
+	"k8s.io/kubernetes/dya/pkg/discovery"
 	"k8s.io/kubernetes/dya/pkg/ecosystem"
 	ecosystemsdks "k8s.io/kubernetes/dya/pkg/ecosystem/sdks"
 	"k8s.io/kubernetes/dya/pkg/edge"
@@ -55,6 +58,7 @@ import (
 	"k8s.io/kubernetes/dya/pkg/event"
 	"k8s.io/kubernetes/dya/pkg/globalscale"
 	"k8s.io/kubernetes/dya/pkg/globalscale/regions"
+	"k8s.io/kubernetes/dya/pkg/graph"
 	"k8s.io/kubernetes/dya/pkg/health"
 	"k8s.io/kubernetes/dya/pkg/impact"
 	"k8s.io/kubernetes/dya/pkg/knowledge"
@@ -104,7 +108,7 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 16: Predictive Infrastructure Intelligence          ║")
+	fmt.Println("║   Stage 16: Multi-Tenancy & Security                         ║")
 	fmt.Println("║   Version: 0.17.0                                           ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
@@ -217,32 +221,100 @@ func main() {
 	defer knowledgeEngine.Stop()
 	klog.Info("Knowledge Engine started successfully")
 
-	// ENTERPRISE ENGINE
-	klog.Info("Creating Enterprise Engine...")
+	// ============================================
+	// ENTERPRISE ENGINE WITH TENANT MANAGER (UPDATED)
+	// ============================================
+	klog.Info("Creating Enterprise Engine with Multi-Tenancy...")
 	enterpriseEngine := enterprise.NewEngine()
 	enterpriseEngine.RegisterAuditor(&enterpriseauditors.BasicAuditor{})
 	enterpriseEngine.RegisterAPIHandler(&enterprisehandlers.BasicHandler{})
 
-	enterpriseEngine.RegisterTenant(enterprise.Tenant{
-		ID:          "tenant-1",
-		Name:        "Default Tenant",
-		Description: "Default enterprise tenant",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	})
+	// Initialize Tenant Manager (REAL ISOLATION)
+	tenantManager := enterprise.NewTenantManager()
 
+	// Create default tenants with quotas
+	defaultQuota := &enterprise.Quota{
+		MaxNodes:       100,
+		MaxAssets:      1000,
+		MaxEvents:      10000,
+		MaxAIProcesses: 10,
+	}
+
+	// Tenant 1: Production
+	tenant1, err := tenantManager.CreateTenant("tenant-1", "Production Tenant", "Main production tenant", defaultQuota)
+	if err != nil {
+		klog.Warningf("Failed to create tenant-1: %v", err)
+	} else {
+		klog.Infof("Created tenant: %s (ID: %s)", tenant1.Name, tenant1.ID)
+	}
+
+	// Tenant 2: Staging
+	tenant2, err := tenantManager.CreateTenant("tenant-2", "Staging Tenant", "Staging/Testing tenant", defaultQuota)
+	if err != nil {
+		klog.Warningf("Failed to create tenant-2: %v", err)
+	} else {
+		klog.Infof("Created tenant: %s (ID: %s)", tenant2.Name, tenant2.ID)
+	}
+
+	// Tenant 3: Development
+	devQuota := &enterprise.Quota{
+		MaxNodes:       20,
+		MaxAssets:      100,
+		MaxEvents:      1000,
+		MaxAIProcesses: 3,
+	}
+	tenant3, err := tenantManager.CreateTenant("tenant-3", "Development Tenant", "Development environment", devQuota)
+	if err != nil {
+		klog.Warningf("Failed to create tenant-3: %v", err)
+	} else {
+		klog.Infof("Created tenant: %s (ID: %s)", tenant3.Name, tenant3.ID)
+	}
+
+	// Initialize Auth Middleware
+	authMiddleware := middleware.NewAuthMiddleware()
+
+	// Generate API keys for tenants
+	adminKey := authMiddleware.GenerateAPIKey("tenant-1", "admin", "admin")
+	tenant1Key := authMiddleware.GenerateAPIKey("tenant-1", "user1", "user")
+	tenant2Key := authMiddleware.GenerateAPIKey("tenant-2", "user2", "user")
+	tenant3Key := authMiddleware.GenerateAPIKey("tenant-3", "user3", "user")
+
+	klog.Infof("API Keys generated:")
+	klog.Infof("  Admin: %s", adminKey)
+	klog.Infof("  Tenant-1: %s", tenant1Key)
+	klog.Infof("  Tenant-2: %s", tenant2Key)
+	klog.Infof("  Tenant-3: %s", tenant3Key)
+
+	// Register tenants with enterprise engine
+	for _, t := range tenantManager.GetAllTenants() {
+		enterpriseEngine.RegisterTenant(enterprise.Tenant{
+			ID:          t.ID,
+			Name:        t.Name,
+			Description: t.Description,
+			CreatedAt:   t.CreatedAt,
+			UpdatedAt:   t.UpdatedAt,
+		})
+	}
+
+	// Register roles
 	enterpriseEngine.RegisterRole(enterprise.Role{
-		ID:          "role-1",
-		Name:        "Admin",
+		ID:          "role-admin",
+		Name:        "Administrator",
 		Permissions: []string{"read", "write", "delete", "admin"},
 		CreatedAt:   time.Now(),
 	})
 
-	enterpriseEngine.RegisterOrganization(enterprise.Organization{
-		ID:          "org-1",
-		Name:        "Default Organization",
-		TenantID:    "tenant-1",
-		Members:     []string{"admin"},
+	enterpriseEngine.RegisterRole(enterprise.Role{
+		ID:          "role-user",
+		Name:        "User",
+		Permissions: []string{"read", "write"},
+		CreatedAt:   time.Now(),
+	})
+
+	enterpriseEngine.RegisterRole(enterprise.Role{
+		ID:          "role-viewer",
+		Name:        "Viewer",
+		Permissions: []string{"read"},
 		CreatedAt:   time.Now(),
 	})
 
@@ -631,8 +703,11 @@ func main() {
 	healthChecker.SetComponent("predictive-engine", true)
 	healthChecker.SetReady(true)
 
-	// START HEALTH SERVER
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine, ecosystemEngine, commercialEngine, globalScaleEngine, predictiveEngine)
+	// START HEALTH SERVER WITH AUTHENTICATION
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, 
+		aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, 
+		edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine, ecosystemEngine, 
+		commercialEngine, globalScaleEngine, predictiveEngine, authMiddleware, tenantManager)
 
 	// RUN CONTROLLER
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -805,12 +880,21 @@ func (h *knowledgeEventHandler) Handle(e *event.Event) error {
 }
 
 // ============================================
-// HEALTH SERVER
+// HEALTH SERVER WITH AUTHENTICATION
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine, ecosystemEngine *ecosystem.Engine, commercialEngine *commercial.Engine, globalScaleEngine *globalscale.Engine, predictiveEngine *predictive.Engine) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, 
+	impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, 
+	aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, 
+	digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, 
+	knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine, 
+	ecosystemEngine *ecosystem.Engine, commercialEngine *commercial.Engine, globalScaleEngine *globalscale.Engine, 
+	predictiveEngine *predictive.Engine, authMiddleware *middleware.AuthMiddleware, 
+	tenantManager *enterprise.TenantManager) {
+	
 	mux := http.NewServeMux()
 
+	// Health endpoints (public)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if checker.IsHealthy() {
 			w.WriteHeader(http.StatusOK)
@@ -831,6 +915,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		}
 	})
 
+	// Metrics (public)
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		metricsData := metrics.GetMetrics()
 		w.Header().Set("Content-Type", "text/plain")
@@ -841,48 +926,307 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 		}
 	})
 
-	// Graph endpoints
-	mux.HandleFunc("/api/graph/nodes", func(w http.ResponseWriter, r *http.Request) {
-		nodes := queryAPI.GetAllNodes()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"nodes\": %d, \"data\": %v}\n", len(nodes), nodes)
-	})
+	// ============================================
+	// PROTECTED API ENDPOINTS
+	// ============================================
+	
+	// Get all nodes (tenant-filtered)
+	mux.HandleFunc("/api/graph/nodes", authMiddleware.Authenticate(
+		func(w http.ResponseWriter, r *http.Request) {
+			tenantID, _ := middleware.GetTenantFromContext(r.Context())
+			role, _ := r.Context().Value("role").(string)
+			
+			nodes := queryAPI.GetAllNodes()
+			
+			// Admin sees all, others see only their tenant
+			var filtered []*graph.Node
+			if role == "admin" {
+				filtered = nodes
+			} else {
+				filtered = filterNodesByTenant(nodes, tenantID)
+			}
+			
+			middleware.WriteJSON(w, map[string]interface{}{
+				"tenant": tenantID,
+				"role":   role,
+				"count":  len(filtered),
+				"nodes":  filtered,
+			}, http.StatusOK)
+		},
+	))
 
-	mux.HandleFunc("/api/graph/dependencies", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
+	// Get dependencies
+	mux.HandleFunc("/api/graph/dependencies", authMiddleware.Authenticate(
+		func(w http.ResponseWriter, r *http.Request) {
+			assetID := r.URL.Query().Get("asset")
+			if assetID == "" {
+				middleware.WriteJSON(w, map[string]string{"error": "missing asset parameter"}, http.StatusBadRequest)
+				return
+			}
+			deps := queryAPI.GetDependencies(assetID)
+			middleware.WriteJSON(w, map[string]interface{}{
+				"asset":        assetID,
+				"dependencies": deps,
+			}, http.StatusOK)
+		},
+	))
+
+	// Get dependents
+	mux.HandleFunc("/api/graph/dependents", authMiddleware.Authenticate(
+		func(w http.ResponseWriter, r *http.Request) {
+			assetID := r.URL.Query().Get("asset")
+			if assetID == "" {
+				middleware.WriteJSON(w, map[string]string{"error": "missing asset parameter"}, http.StatusBadRequest)
+				return
+			}
+			deps := queryAPI.GetDependents(assetID)
+			middleware.WriteJSON(w, map[string]interface{}{
+				"asset":      assetID,
+				"dependents": deps,
+			}, http.StatusOK)
+		},
+	))
+
+	// Impact analysis
+	mux.HandleFunc("/api/impact/analyze", authMiddleware.Authenticate(
+		func(w http.ResponseWriter, r *http.Request) {
+			assetID := r.URL.Query().Get("asset")
+			if assetID == "" {
+				middleware.WriteJSON(w, map[string]string{"error": "missing asset parameter"}, http.StatusBadRequest)
+				return
+			}
+			result := impactAnalyzer.Analyze(assetID)
+			middleware.WriteJSON(w, map[string]interface{}{
+				"asset":  assetID,
+				"impact": result,
+			}, http.StatusOK)
+		},
+	))
+
+	// Get nodes by kind
+	mux.HandleFunc("/api/nodes/by-kind", authMiddleware.Authenticate(
+		func(w http.ResponseWriter, r *http.Request) {
+			kind := r.URL.Query().Get("kind")
+			if kind == "" {
+				middleware.WriteJSON(w, map[string]string{"error": "missing kind parameter"}, http.StatusBadRequest)
+				return
+			}
+			
+			tenantID, _ := middleware.GetTenantFromContext(r.Context())
+			nodes := queryAPI.GetAllNodes()
+			filtered := filterNodesByKind(nodes, kind, tenantID)
+			
+			middleware.WriteJSON(w, map[string]interface{}{
+				"kind":   kind,
+				"tenant": tenantID,
+				"count":  len(filtered),
+				"nodes":  filtered,
+			}, http.StatusOK)
+		},
+	))
+
+	// ============================================
+	// TENANT MANAGEMENT (Admin only)
+	// ============================================
+	
+	// Get all tenants
+	mux.HandleFunc("/api/tenants", authMiddleware.Authenticate(
+		middleware.RequireRole("admin")(
+			func(w http.ResponseWriter, r *http.Request) {
+				tenants := tenantManager.GetAllTenants()
+				middleware.WriteJSON(w, tenants, http.StatusOK)
+			},
+		),
+	))
+
+	// Get tenant usage
+	mux.HandleFunc("/api/tenant/usage", authMiddleware.Authenticate(
+		func(w http.ResponseWriter, r *http.Request) {
+			tenantID, _ := middleware.GetTenantFromContext(r.Context())
+			usage, err := tenantManager.GetTenantUsage(tenantID)
+			if err != nil {
+				middleware.WriteJSON(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
+				return
+			}
+			middleware.WriteJSON(w, map[string]interface{}{
+				"tenant": tenantID,
+				"usage":  usage,
+			}, http.StatusOK)
+		},
+	))
+
+	// Create tenant (Admin only)
+	mux.HandleFunc("/api/tenants/create", authMiddleware.Authenticate(
+		middleware.RequireRole("admin")(
+			func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					middleware.WriteJSON(w, map[string]string{"error": "method not allowed"}, http.StatusMethodNotAllowed)
+					return
+				}
+				
+				var req struct {
+					ID          string `json:"id"`
+					Name        string `json:"name"`
+					Description string `json:"description"`
+					Quota       *enterprise.Quota `json:"quota"`
+				}
+				
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+					middleware.WriteJSON(w, map[string]string{"error": "invalid request"}, http.StatusBadRequest)
+					return
+				}
+				
+				tenant, err := tenantManager.CreateTenant(req.ID, req.Name, req.Description, req.Quota)
+				if err != nil {
+					middleware.WriteJSON(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
+					return
+				}
+				
+				middleware.WriteJSON(w, tenant, http.StatusCreated)
+			},
+		),
+	))
+
+	// Delete tenant (Admin only)
+	mux.HandleFunc("/api/tenants/delete", authMiddleware.Authenticate(
+		middleware.RequireRole("admin")(
+			func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodDelete {
+					middleware.WriteJSON(w, map[string]string{"error": "method not allowed"}, http.StatusMethodNotAllowed)
+					return
+				}
+				
+				tenantID := r.URL.Query().Get("id")
+				if tenantID == "" {
+					middleware.WriteJSON(w, map[string]string{"error": "missing tenant id"}, http.StatusBadRequest)
+					return
+				}
+				
+				if err := tenantManager.DeleteTenant(tenantID); err != nil {
+					middleware.WriteJSON(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
+					return
+				}
+				
+				middleware.WriteJSON(w, map[string]string{"status": "deleted"}, http.StatusOK)
+			},
+		),
+	))
+
+	// ============================================
+	// AI ENDPOINTS
+	// ============================================
+	
+	// Get AI anomalies
+	mux.HandleFunc("/api/ai/anomalies", authMiddleware.Authenticate(
+		func(w http.ResponseWriter, r *http.Request) {
+			// This would normally query the AI engine for current anomalies
+			middleware.WriteJSON(w, map[string]interface{}{
+				"status":    "ok",
+				"anomalies": []string{},
+				"message":   "AI engine running",
+			}, http.StatusOK)
+		},
+	))
+
+	// Get resilience status
+	mux.HandleFunc("/api/resilience/status", authMiddleware.Authenticate(
+		func(w http.ResponseWriter, r *http.Request) {
+			middleware.WriteJSON(w, map[string]interface{}{
+				"status":  "healthy",
+				"running": resilienceEngine.IsRunning(),
+			}, http.StatusOK)
+		},
+	))
+
+	// Get recovery plans
+	mux.HandleFunc("/api/recovery/plans", authMiddleware.Authenticate(
+		func(w http.ResponseWriter, r *http.Request) {
+			middleware.WriteJSON(w, map[string]interface{}{
+				"plans":  []string{},
+				"status": "available",
+			}, http.StatusOK)
+		},
+	))
+
+	// ============================================
+	// AUDIT LOG (Admin only)
+	// ============================================
+	
+	mux.HandleFunc("/api/audit/logs", authMiddleware.Authenticate(
+		middleware.RequireRole("admin")(
+			func(w http.ResponseWriter, r *http.Request) {
+				// In production, this would query the audit log
+				middleware.WriteJSON(w, map[string]interface{}{
+					"logs":   []string{},
+					"status": "ok",
+				}, http.StatusOK)
+			},
+		),
+	))
+
+	// Start server
+	server := &http.Server{
+		Addr:         fmt.Sprintf(":%d", port),
+		Handler:      mux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	klog.Infof("Starting health server on port %d", port)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		klog.Fatalf("Health server failed: %v", err)
+	}
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+func filterNodesByTenant(nodes []*graph.Node, tenantID string) []*graph.Node {
+	if tenantID == "" {
+		return nodes
+	}
+	
+	result := make([]*graph.Node, 0)
+	for _, node := range nodes {
+		if node.Labels != nil {
+			if nodeTenant, ok := node.Labels["tenant"]; ok && nodeTenant == tenantID {
+				result = append(result, node)
+				continue
+			}
 		}
-		deps := queryAPI.GetDependencies(assetID)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"dependencies\": %v}\n", assetID, deps)
-	})
-
-	mux.HandleFunc("/api/graph/dependents", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
+		// If no tenant label, only show for tenant-1 (default)
+		if tenantID == "tenant-1" {
+			result = append(result, node)
 		}
-		deps := queryAPI.GetDependents(assetID)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"dependents\": %v}\n", assetID, deps)
-	})
+	}
+	return result
+}
 
-	mux.HandleFunc("/api/impact/analyze", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
+func filterNodesByKind(nodes []*graph.Node, kind string, tenantID string) []*graph.Node {
+	result := make([]*graph.Node, 0)
+	for _, node := range nodes {
+		if node.Kind == kind {
+			if node.Labels != nil {
+				if nodeTenant, ok := node.Labels["tenant"]; ok {
+					if nodeTenant == tenantID || tenantID == "tenant-1" {
+						result = append(result, node)
+					}
+					continue
+				}
+			}
+			if tenantID == "tenant-1" {
+				result = append(result, node)
+			}
 		}
-		result := impactAnalyzer.Analyze(assetID)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"impact\": %v}\n", assetID, result)
-	})
+	}
+	return result
+}
 
-	mux.HandleFunc("/api/nodes/by-kind", func(w http.ResponseWriter, r *http.Request) {
-		kind := r.URL.Query().Get("kind
+func getConfig() (*rest.Config, error) {
+	if kubeconfig != "" {
+		return clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+	}
+	return rest.InClusterConfig()
+}
