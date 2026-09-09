@@ -24,12 +24,12 @@ import (
 )
 
 type Engine struct {
-	mu          sync.RWMutex
-	handlers    []Handler
-	syncers     []Syncer
-	enforcers   []Enforcer
-	buffers     []Buffer
-	running     bool
+	mu        sync.RWMutex
+	handlers  []Handler
+	syncers   []Syncer
+	enforcers []Enforcer
+	buffers   []Buffer
+	running   bool
 }
 
 type Handler interface {
