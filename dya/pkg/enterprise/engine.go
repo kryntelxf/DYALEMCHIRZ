@@ -23,6 +23,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// Engine is the enterprise engine
 type Engine struct {
 	mu            sync.RWMutex
 	tenants       []Tenant
@@ -33,6 +34,7 @@ type Engine struct {
 	running       bool
 }
 
+// Tenant represents a tenant
 type Tenant struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
@@ -41,13 +43,15 @@ type Tenant struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
+// Role represents a role
 type Role struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Permissions []string `json:"permissions"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Permissions []string  `json:"permissions"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
+// Organization represents an organization
 type Organization struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
@@ -56,16 +60,19 @@ type Organization struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
+// Auditor interface
 type Auditor interface {
 	Audit(event interface{}) error
 	Name() string
 }
 
+// APIHandler interface
 type APIHandler interface {
 	Handle(request interface{}) (*APIResponse, error)
 	Name() string
 }
 
+// APIResponse represents an API response
 type APIResponse struct {
 	Success   bool        `json:"success"`
 	Data      interface{} `json:"data"`
@@ -73,6 +80,7 @@ type APIResponse struct {
 	Timestamp time.Time   `json:"timestamp"`
 }
 
+// NewEngine creates a new enterprise engine
 func NewEngine() *Engine {
 	return &Engine{
 		tenants:       make([]Tenant, 0),
@@ -84,6 +92,7 @@ func NewEngine() *Engine {
 	}
 }
 
+// RegisterTenant registers a tenant
 func (e *Engine) RegisterTenant(tenant Tenant) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -91,6 +100,7 @@ func (e *Engine) RegisterTenant(tenant Tenant) {
 	klog.Infof("Registered tenant: %s", tenant.Name)
 }
 
+// RegisterRole registers a role
 func (e *Engine) RegisterRole(role Role) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -98,6 +108,7 @@ func (e *Engine) RegisterRole(role Role) {
 	klog.Infof("Registered role: %s", role.Name)
 }
 
+// RegisterOrganization registers an organization
 func (e *Engine) RegisterOrganization(org Organization) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -105,6 +116,7 @@ func (e *Engine) RegisterOrganization(org Organization) {
 	klog.Infof("Registered organization: %s", org.Name)
 }
 
+// RegisterAuditor registers an auditor
 func (e *Engine) RegisterAuditor(auditor Auditor) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -112,6 +124,7 @@ func (e *Engine) RegisterAuditor(auditor Auditor) {
 	klog.Infof("Registered enterprise auditor: %s", auditor.Name())
 }
 
+// RegisterAPIHandler registers an API handler
 func (e *Engine) RegisterAPIHandler(handler APIHandler) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -119,6 +132,7 @@ func (e *Engine) RegisterAPIHandler(handler APIHandler) {
 	klog.Infof("Registered API handler: %s", handler.Name())
 }
 
+// Start starts the engine
 func (e *Engine) Start() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -129,6 +143,7 @@ func (e *Engine) Start() {
 	klog.Info("Enterprise Engine started")
 }
 
+// Stop stops the engine
 func (e *Engine) Stop() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -139,30 +154,35 @@ func (e *Engine) Stop() {
 	klog.Info("Enterprise Engine stopped")
 }
 
+// IsRunning returns whether the engine is running
 func (e *Engine) IsRunning() bool {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.running
 }
 
+// GetTenants returns all tenants
 func (e *Engine) GetTenants() []Tenant {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.tenants
 }
 
+// GetRoles returns all roles
 func (e *Engine) GetRoles() []Role {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.roles
 }
 
+// GetOrganizations returns all organizations
 func (e *Engine) GetOrganizations() []Organization {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.organizations
 }
 
+// Audit runs audit on an event
 func (e *Engine) Audit(event interface{}) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
@@ -173,6 +193,7 @@ func (e *Engine) Audit(event interface{}) {
 	}
 }
 
+// HandleAPI handles an API request
 func (e *Engine) HandleAPI(request interface{}) []*APIResponse {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
