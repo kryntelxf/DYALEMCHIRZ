@@ -53,6 +53,8 @@ import (
 	enterpriseauditors "k8s.io/kubernetes/dya/pkg/enterprise/auditors"
 	enterprisehandlers "k8s.io/kubernetes/dya/pkg/enterprise/handlers"
 	"k8s.io/kubernetes/dya/pkg/event"
+	"k8s.io/kubernetes/dya/pkg/globalscale"
+	"k8s.io/kubernetes/dya/pkg/globalscale/regions"
 	"k8s.io/kubernetes/dya/pkg/health"
 	"k8s.io/kubernetes/dya/pkg/impact"
 	"k8s.io/kubernetes/dya/pkg/knowledge"
@@ -100,8 +102,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 14: Commercial Platform                             ║")
-	fmt.Println("║   Version: 0.15.0                                           ║")
+	fmt.Println("║   Stage 15: Global Scale                                    ║")
+	fmt.Println("║   Version: 0.16.0                                           ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -377,13 +379,11 @@ func main() {
 	klog.Info("Creating Commercial Platform Engine...")
 	commercialEngine := commercial.NewEngine()
 
-	// Register enterprise license
 	enterpriseLicense := licenses.GetEnterpriseLicense()
 	if l, ok := enterpriseLicense.(commercial.License); ok {
 		commercialEngine.RegisterLicense(l)
 	}
 
-	// Register support plans
 	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
 		ID:           "support-basic",
 		Name:         "Basic Support",
@@ -411,7 +411,6 @@ func main() {
 		CreatedAt:    time.Now(),
 	})
 
-	// Register managed services
 	commercialEngine.RegisterManagedService(commercial.ManagedService{
 		ID:          "managed-basic",
 		Name:        "Basic Managed Service",
@@ -420,7 +419,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register professional services
 	commercialEngine.RegisterProfessionalService(commercial.ProfessionalService{
 		ID:          "prof-consulting",
 		Name:        "Consulting Services",
@@ -439,7 +437,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register partners
 	commercialEngine.RegisterPartner(commercial.Partner{
 		ID:          "partner-acme",
 		Name:        "ACME Consulting",
@@ -448,7 +445,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register commercial APIs
 	commercialEngine.RegisterCommercialAPI(commercial.CommercialAPI{
 		ID:          "api-enterprise",
 		Name:        "Enterprise API",
@@ -461,6 +457,132 @@ func main() {
 	commercialEngine.Start()
 	defer commercialEngine.Stop()
 	klog.Info("Commercial Platform Engine started successfully")
+
+	// GLOBAL SCALE ENGINE
+	klog.Info("Creating Global Scale Engine...")
+	globalScaleEngine := globalscale.NewEngine()
+
+	globalRegions := regions.GetGlobalRegions()
+	for _, region := range globalRegions {
+		if r, ok := region.(globalscale.Region); ok {
+			globalScaleEngine.RegisterRegion(r)
+		}
+	}
+
+	globalScaleEngine.RegisterCluster(globalscale.Cluster{
+		ID:        "cluster-us-east",
+		Name:      "US East Cluster",
+		Region:    "region-us-east",
+		Nodes:     100,
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterCluster(globalscale.Cluster{
+		ID:        "cluster-us-west",
+		Name:      "US West Cluster",
+		Region:    "region-us-west",
+		Nodes:     100,
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterCluster(globalscale.Cluster{
+		ID:        "cluster-eu-west",
+		Name:      "EU West Cluster",
+		Region:    "region-eu-west",
+		Nodes:     100,
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterCluster(globalscale.Cluster{
+		ID:        "cluster-ap-southeast",
+		Name:      "AP Southeast Cluster",
+		Region:    "region-ap-southeast",
+		Nodes:     100,
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterLoadBalancer(globalscale.LoadBalancer{
+		ID:        "lb-us-east",
+		Name:      "US East Load Balancer",
+		Region:    "region-us-east",
+		Endpoint:  "https://lb-us-east.dyalemchirz.com",
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterLoadBalancer(globalscale.LoadBalancer{
+		ID:        "lb-us-west",
+		Name:      "US West Load Balancer",
+		Region:    "region-us-west",
+		Endpoint:  "https://lb-us-west.dyalemchirz.com",
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterLoadBalancer(globalscale.LoadBalancer{
+		ID:        "lb-eu-west",
+		Name:      "EU West Load Balancer",
+		Region:    "region-eu-west",
+		Endpoint:  "https://lb-eu-west.dyalemchirz.com",
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterLoadBalancer(globalscale.LoadBalancer{
+		ID:        "lb-ap-southeast",
+		Name:      "AP Southeast Load Balancer",
+		Region:    "region-ap-southeast",
+		Endpoint:  "https://lb-ap-southeast.dyalemchirz.com",
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterCacheNode(globalscale.CacheNode{
+		ID:        "cache-us-east",
+		Name:      "US East Cache",
+		Region:    "region-us-east",
+		Size:      1024,
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterMonitor(globalscale.Monitor{
+		ID:        "monitor-us-east",
+		Name:      "US East Monitor",
+		Region:    "region-us-east",
+		Type:      "health",
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterAutoScaler(globalscale.AutoScaler{
+		ID:        "scaler-us-east",
+		Name:      "US East Auto-Scaler",
+		Region:    "region-us-east",
+		MinNodes:  10,
+		MaxNodes:  200,
+		Status:    "active",
+		CreatedAt: time.Now(),
+	})
+
+	globalScaleEngine.RegisterDisasterRecovery(globalscale.DisasterRecovery{
+		ID:           "dr-us-east",
+		Name:         "US East Disaster Recovery",
+		Region:       "region-us-east",
+		BackupRegion: "region-us-west",
+		RPO:          "5 minutes",
+		RTO:          "15 minutes",
+		Status:       "active",
+		CreatedAt:    time.Now(),
+	})
+
+	globalScaleEngine.Start()
+	defer globalScaleEngine.Stop()
+	klog.Info("Global Scale Engine started successfully")
 
 	// LOAD GRAPH
 	klog.Info("Loading graph from storage...")
@@ -495,10 +617,11 @@ func main() {
 	healthChecker.SetComponent("developer-engine", true)
 	healthChecker.SetComponent("ecosystem-engine", true)
 	healthChecker.SetComponent("commercial-engine", true)
+	healthChecker.SetComponent("global-scale-engine", true)
 	healthChecker.SetReady(true)
 
 	// START HEALTH SERVER
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine, ecosystemEngine, commercialEngine)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine, ecosystemEngine, commercialEngine, globalScaleEngine)
 
 	// RUN CONTROLLER
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -516,7 +639,7 @@ func main() {
 }
 
 // ============================================
-// EVENT HANDLERS (Tidak berubah - sama seperti sebelumnya)
+// EVENT HANDLERS
 // ============================================
 
 type eventStoreHandler struct {
@@ -674,7 +797,7 @@ func (h *knowledgeEventHandler) Handle(e *event.Event) error {
 // HEALTH SERVER
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine, ecosystemEngine *ecosystem.Engine, commercialEngine *commercial.Engine) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine, ecosystemEngine *ecosystem.Engine, commercialEngine *commercial.Engine, globalScaleEngine *globalscale.Engine) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -769,599 +892,4 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 			fmt.Sscanf(r.URL.Query().Get("limit"), "%d", &limit)
 		}
 		events := eventStore.GetRecent(limit)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"count\": %d, \"events\": %v}\n", len(events), events)
-	})
-
-	mux.HandleFunc("/api/events/by-asset", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
-		}
-		events := eventStore.GetByAsset(assetID)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"count\": %d, \"events\": %v}\n", assetID, len(events), events)
-	})
-
-	mux.HandleFunc("/api/events/count", func(w http.ResponseWriter, r *http.Request) {
-		count := eventStore.Count()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"total_events\": %d}\n", count)
-	})
-
-	// AI endpoints
-	mux.HandleFunc("/api/ai/anomalies", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
-		}
-		events := eventStore.GetByAsset(assetID)
-		if len(events) == 0 {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, "{\"asset\": \"%s\", \"anomalies\": []}\n", assetID)
-			return
-		}
-		latestEvent := events[len(events)-1]
-		anomalies := aiEngine.Detect(latestEvent)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"anomalies\": %v}\n", assetID, anomalies)
-	})
-
-	mux.HandleFunc("/api/ai/risk", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
-		}
-		node, ok := queryAPI.GetNode(assetID)
-		if !ok {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, "{\"asset\": \"%s\", \"risk\": null}\n", assetID)
-			return
-		}
-		scores := aiEngine.Score(node)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"risk\": %v}\n", assetID, scores)
-	})
-
-	mux.HandleFunc("/api/ai/predict", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
-		}
-		node, ok := queryAPI.GetNode(assetID)
-		if !ok {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, "{\"asset\": \"%s\", \"predictions\": []}\n", assetID)
-			return
-		}
-		predictions := aiEngine.Predict(node)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"predictions\": %v}\n", assetID, predictions)
-	})
-
-	mux.HandleFunc("/api/ai/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if aiEngine != nil && aiEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			aiEngine != nil && aiEngine.IsRunning())
-	})
-
-	// Resilience endpoints
-	mux.HandleFunc("/api/resilience/health", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
-		}
-		node, ok := queryAPI.GetNode(assetID)
-		if !ok {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, "{\"asset\": \"%s\", \"health\": null}\n", assetID)
-			return
-		}
-		healthStatuses := resilienceEngine.CheckHealth(node)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"health\": %v}\n", assetID, healthStatuses)
-	})
-
-	mux.HandleFunc("/api/resilience/failures", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
-		}
-		node, ok := queryAPI.GetNode(assetID)
-		if !ok {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, "{\"asset\": \"%s\", \"failures\": []}\n", assetID)
-			return
-		}
-		failures := resilienceEngine.DetectFailures(node)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"failures\": %v}\n", assetID, failures)
-	})
-
-	mux.HandleFunc("/api/resilience/recovery", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
-		}
-		failureType := r.URL.Query().Get("type")
-		if failureType == "" {
-			failureType = "unknown"
-		}
-		node, ok := queryAPI.GetNode(assetID)
-		if !ok {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, "{\"asset\": \"%s\", \"recovery\": null}\n", assetID)
-			return
-		}
-		failure := &resilience.Failure{
-			AssetID:     assetID,
-			Type:        failureType,
-			Severity:    "medium",
-			Description: "Simulated failure for testing",
-			Timestamp:   time.Now(),
-		}
-		plans := resilienceEngine.PlanRecovery(node, failure)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"recovery\": %v}\n", assetID, plans)
-	})
-
-	mux.HandleFunc("/api/resilience/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if resilienceEngine != nil && resilienceEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			resilienceEngine != nil && resilienceEngine.IsRunning())
-	})
-
-	// Recovery Orchestrator endpoints
-	mux.HandleFunc("/api/recovery/execute", func(w http.ResponseWriter, r *http.Request) {
-		assetID := r.URL.Query().Get("asset")
-		if assetID == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing asset parameter"))
-			return
-		}
-		_, ok := queryAPI.GetNode(assetID)
-		if !ok {
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, "{\"asset\": \"%s\", \"status\": \"asset not found\"}\n", assetID)
-			return
-		}
-
-		plan := &simplePlan{
-			assetID: assetID,
-			name:    "recovery-" + assetID,
-			steps: []recovery.Step{
-				{ID: "step-1", Name: "Investigate failure", Action: "investigate", Description: "Investigate the cause of failure", Timeout: 30 * time.Second},
-				{ID: "step-2", Name: "Restart service", Action: "restart", Description: "Restart the failed service", Timeout: 60 * time.Second},
-				{ID: "step-3", Name: "Verify recovery", Action: "verify", Description: "Verify that the service is recovered", Timeout: 30 * time.Second},
-			},
-		}
-
-		status := recoveryOrchestrator.ExecutePlan(plan)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"asset\": \"%s\", \"status\": %v}\n", assetID, status)
-	})
-
-	mux.HandleFunc("/api/recovery/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if recoveryOrchestrator != nil && recoveryOrchestrator.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			recoveryOrchestrator != nil && recoveryOrchestrator.IsRunning())
-	})
-
-	// Digital Twin endpoints
-	mux.HandleFunc("/api/digitaltwin/simulate", func(w http.ResponseWriter, r *http.Request) {
-		scenarioName := r.URL.Query().Get("name")
-		if scenarioName == "" {
-			scenarioName = "default-scenario"
-		}
-
-		scenario := &digitaltwin.Scenario{
-			ID:          "scenario-" + time.Now().Format("20060102150405"),
-			Name:        scenarioName,
-			Description: "Simulation scenario",
-			Changes: map[string]interface{}{
-				"type": "test",
-			},
-			Parameters: map[string]string{
-				"source": "api",
-			},
-		}
-
-		results := digitalTwinEngine.Simulate(scenario)
-		analyses := digitalTwinEngine.Analyze(results)
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"scenario\": \"%s\", \"results\": %v, \"analyses\": %v}\n", scenario.ID, results, analyses)
-	})
-
-	mux.HandleFunc("/api/digitaltwin/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if digitalTwinEngine != nil && digitalTwinEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			digitalTwinEngine != nil && digitalTwinEngine.IsRunning())
-	})
-
-	// Security endpoints
-	mux.HandleFunc("/api/security/verify", func(w http.ResponseWriter, r *http.Request) {
-		identity := r.URL.Query().Get("identity")
-		if identity == "" {
-			identity = "unknown"
-		}
-		results := securityEngine.Verify(identity)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"identity\": \"%s\", \"results\": %v}\n", identity, results)
-	})
-
-	mux.HandleFunc("/api/security/enforce", func(w http.ResponseWriter, r *http.Request) {
-		policy := r.URL.Query().Get("policy")
-		if policy == "" {
-			policy = "default"
-		}
-		context := r.URL.Query().Get("context")
-		if context == "" {
-			context = "default"
-		}
-		results := securityEngine.Enforce(policy, context)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"policy\": \"%s\", \"results\": %v}\n", policy, results)
-	})
-
-	mux.HandleFunc("/api/security/anomalies", func(w http.ResponseWriter, r *http.Request) {
-		activity := r.URL.Query().Get("activity")
-		if activity == "" {
-			activity = "unknown"
-		}
-		anomalies := securityEngine.Detect(activity)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"activity\": \"%s\", \"anomalies\": %v}\n", activity, anomalies)
-	})
-
-	mux.HandleFunc("/api/security/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if securityEngine != nil && securityEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			securityEngine != nil && securityEngine.IsRunning())
-	})
-
-	// Edge endpoints
-	mux.HandleFunc("/api/edge/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if edgeEngine != nil && edgeEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			edgeEngine != nil && edgeEngine.IsRunning())
-	})
-
-	mux.HandleFunc("/api/edge/sync", func(w http.ResponseWriter, r *http.Request) {
-		if edgeEngine != nil {
-			edgeEngine.Sync()
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("sync triggered"))
-		} else {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("edge engine not available"))
-		}
-	})
-
-	mux.HandleFunc("/api/edge/buffer", func(w http.ResponseWriter, r *http.Request) {
-		if edgeEngine == nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("edge engine not available"))
-			return
-		}
-		results := edgeEngine.FlushBuffers()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"buffers\": %v}\n", results)
-	})
-
-	// Knowledge endpoints
-	mux.HandleFunc("/api/knowledge/extract", func(w http.ResponseWriter, r *http.Request) {
-		if knowledgeEngine == nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("knowledge engine not available"))
-			return
-		}
-		data := r.URL.Query().Get("data")
-		if data == "" {
-			data = "default"
-		}
-		knowledge := knowledgeEngine.Extract(data)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"knowledge\": %v}\n", knowledge)
-	})
-
-	mux.HandleFunc("/api/knowledge/query", func(w http.ResponseWriter, r *http.Request) {
-		if knowledgeEngine == nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("knowledge engine not available"))
-			return
-		}
-		query := r.URL.Query().Get("q")
-		if query == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("missing query parameter"))
-			return
-		}
-		results := knowledgeEngine.Query(query)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"query\": \"%s\", \"results\": %v}\n", query, results)
-	})
-
-	mux.HandleFunc("/api/knowledge/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if knowledgeEngine != nil && knowledgeEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			knowledgeEngine != nil && knowledgeEngine.IsRunning())
-	})
-
-	// Enterprise endpoints
-	mux.HandleFunc("/api/enterprise/tenants", func(w http.ResponseWriter, r *http.Request) {
-		tenants := enterpriseEngine.GetTenants()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"tenants\": %v}\n", tenants)
-	})
-
-	mux.HandleFunc("/api/enterprise/roles", func(w http.ResponseWriter, r *http.Request) {
-		roles := enterpriseEngine.GetRoles()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"roles\": %v}\n", roles)
-	})
-
-	mux.HandleFunc("/api/enterprise/organizations", func(w http.ResponseWriter, r *http.Request) {
-		orgs := enterpriseEngine.GetOrganizations()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"organizations\": %v}\n", orgs)
-	})
-
-	mux.HandleFunc("/api/enterprise/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if enterpriseEngine != nil && enterpriseEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			enterpriseEngine != nil && enterpriseEngine.IsRunning())
-	})
-
-	// Developer endpoints
-	mux.HandleFunc("/api/developer/sdks", func(w http.ResponseWriter, r *http.Request) {
-		sdks := developerEngine.GetSDKs()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"sdks\": %v}\n", sdks)
-	})
-
-	mux.HandleFunc("/api/developer/plugins", func(w http.ResponseWriter, r *http.Request) {
-		plugins := developerEngine.GetPlugins()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"plugins\": %v}\n", plugins)
-	})
-
-	mux.HandleFunc("/api/developer/templates", func(w http.ResponseWriter, r *http.Request) {
-		templates := developerEngine.GetTemplates()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"templates\": %v}\n", templates)
-	})
-
-	mux.HandleFunc("/api/developer/tools", func(w http.ResponseWriter, r *http.Request) {
-		tools := developerEngine.GetTools()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"tools\": %v}\n", tools)
-	})
-
-	mux.HandleFunc("/api/developer/docs", func(w http.ResponseWriter, r *http.Request) {
-		docs := developerEngine.GetDocs()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"docs\": %v}\n", docs)
-	})
-
-	mux.HandleFunc("/api/developer/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if developerEngine != nil && developerEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			developerEngine != nil && developerEngine.IsRunning())
-	})
-
-	// Ecosystem endpoints
-	mux.HandleFunc("/api/ecosystem/sdks", func(w http.ResponseWriter, r *http.Request) {
-		sdks := ecosystemEngine.GetSDKs()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"sdks\": %v}\n", sdks)
-	})
-
-	mux.HandleFunc("/api/ecosystem/plugins", func(w http.ResponseWriter, r *http.Request) {
-		plugins := ecosystemEngine.GetPlugins()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"plugins\": %v}\n", plugins)
-	})
-
-	mux.HandleFunc("/api/ecosystem/integrations", func(w http.ResponseWriter, r *http.Request) {
-		integrations := ecosystemEngine.GetIntegrations()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"integrations\": %v}\n", integrations)
-	})
-
-	mux.HandleFunc("/api/ecosystem/examples", func(w http.ResponseWriter, r *http.Request) {
-		examples := ecosystemEngine.GetExamples()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"examples\": %v}\n", examples)
-	})
-
-	mux.HandleFunc("/api/ecosystem/guides", func(w http.ResponseWriter, r *http.Request) {
-		guides := ecosystemEngine.GetGuides()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"guides\": %v}\n", guides)
-	})
-
-	mux.HandleFunc("/api/ecosystem/partners", func(w http.ResponseWriter, r *http.Request) {
-		partners := ecosystemEngine.GetPartners()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"partners\": %v}\n", partners)
-	})
-
-	mux.HandleFunc("/api/ecosystem/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if ecosystemEngine != nil && ecosystemEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			ecosystemEngine != nil && ecosystemEngine.IsRunning())
-	})
-
-	// Commercial Platform endpoints
-	mux.HandleFunc("/api/commercial/licenses", func(w http.ResponseWriter, r *http.Request) {
-		licenses := commercialEngine.GetLicenses()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"licenses\": %v}\n", licenses)
-	})
-
-	mux.HandleFunc("/api/commercial/support", func(w http.ResponseWriter, r *http.Request) {
-		supportPlans := commercialEngine.GetSupportPlans()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"supportPlans\": %v}\n", supportPlans)
-	})
-
-	mux.HandleFunc("/api/commercial/services/managed", func(w http.ResponseWriter, r *http.Request) {
-		services := commercialEngine.GetManagedServices()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"managedServices\": %v}\n", services)
-	})
-
-	mux.HandleFunc("/api/commercial/services/professional", func(w http.ResponseWriter, r *http.Request) {
-		services := commercialEngine.GetProfessionalServices()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"professionalServices\": %v}\n", services)
-	})
-
-	mux.HandleFunc("/api/commercial/partners", func(w http.ResponseWriter, r *http.Request) {
-		partners := commercialEngine.GetPartners()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"partners\": %v}\n", partners)
-	})
-
-	mux.HandleFunc("/api/commercial/apis", func(w http.ResponseWriter, r *http.Request) {
-		apis := commercialEngine.GetCommercialAPIs()
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"commercialAPIs\": %v}\n", apis)
-	})
-
-	mux.HandleFunc("/api/commercial/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
-			func() string {
-				if commercialEngine != nil && commercialEngine.IsRunning() {
-					return "healthy"
-				}
-				return "unhealthy"
-			}(),
-			commercialEngine != nil && commercialEngine.IsRunning())
-	})
-
-	addr := fmt.Sprintf(":%d", port)
-	klog.Infof("Health server listening on %s", addr)
-
-	server := &http.Server{
-		Addr:              addr,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		klog.Errorf("Health server failed: %v", err)
-	}
-}
-
-// simplePlan implements recovery.Plan
-type simplePlan struct {
-	assetID string
-	name    string
-	steps   []recovery.Step
-}
-
-func (p *simplePlan) GetSteps() []recovery.Step {
-	return p.steps
-}
-
-func (p *simplePlan) GetAssetID() string {
-	return p.assetID
-}
-
-func (p *simplePlan) GetPriority() int {
-	return 1
-}
-
-func (p *simplePlan) RequiresApproval() bool {
-	return false
-}
-
-func (p *simplePlan) Name() string {
-	return p.name
-}
-
-func getConfig() (*rest.Config, error) {
-	if kubeconfig != "" {
-		return clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
-	}
-	if _, err := rest.InClusterConfig(); err == nil {
-		return rest.InClusterConfig()
-	}
-	return nil, fmt.Errorf("could not get Kubernetes config. Use -kubeconfig or run in-cluster")
-}
+		w.Header
