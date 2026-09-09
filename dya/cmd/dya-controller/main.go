@@ -44,7 +44,6 @@ import (
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
-	"k8s.io/kubernetes/dya/pkg/discovery"
 	"k8s.io/kubernetes/dya/pkg/ecosystem"
 	ecosystemsdks "k8s.io/kubernetes/dya/pkg/ecosystem/sdks"
 	"k8s.io/kubernetes/dya/pkg/edge"
@@ -222,7 +221,7 @@ func main() {
 	klog.Info("Knowledge Engine started successfully")
 
 	// ============================================
-	// ENTERPRISE ENGINE WITH TENANT MANAGER (UPDATED)
+	// ENTERPRISE ENGINE WITH TENANT MANAGER
 	// ============================================
 	klog.Info("Creating Enterprise Engine with Multi-Tenancy...")
 	enterpriseEngine := enterprise.NewEngine()
@@ -704,9 +703,9 @@ func main() {
 	healthChecker.SetReady(true)
 
 	// START HEALTH SERVER WITH AUTHENTICATION
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, 
-		aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, 
-		edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine, ecosystemEngine, 
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore,
+		aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine,
+		edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine, ecosystemEngine,
 		commercialEngine, globalScaleEngine, predictiveEngine, authMiddleware, tenantManager)
 
 	// RUN CONTROLLER
@@ -883,15 +882,15 @@ func (h *knowledgeEventHandler) Handle(e *event.Event) error {
 // HEALTH SERVER WITH AUTHENTICATION
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, 
-	impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, 
-	aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, 
-	digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, 
-	knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine, 
-	ecosystemEngine *ecosystem.Engine, commercialEngine *commercial.Engine, globalScaleEngine *globalscale.Engine, 
-	predictiveEngine *predictive.Engine, authMiddleware *middleware.AuthMiddleware, 
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller,
+	impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store,
+	aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator,
+	digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine,
+	knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine,
+	ecosystemEngine *ecosystem.Engine, commercialEngine *commercial.Engine, globalScaleEngine *globalscale.Engine,
+	predictiveEngine *predictive.Engine, authMiddleware *middleware.AuthMiddleware,
 	tenantManager *enterprise.TenantManager) {
-	
+
 	mux := http.NewServeMux()
 
 	// Health endpoints (public)
@@ -929,15 +928,15 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 	// ============================================
 	// PROTECTED API ENDPOINTS
 	// ============================================
-	
+
 	// Get all nodes (tenant-filtered)
 	mux.HandleFunc("/api/graph/nodes", authMiddleware.Authenticate(
 		func(w http.ResponseWriter, r *http.Request) {
 			tenantID, _ := middleware.GetTenantFromContext(r.Context())
 			role, _ := r.Context().Value("role").(string)
-			
+
 			nodes := queryAPI.GetAllNodes()
-			
+
 			// Admin sees all, others see only their tenant
 			var filtered []*graph.Node
 			if role == "admin" {
@@ -945,7 +944,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 			} else {
 				filtered = filterNodesByTenant(nodes, tenantID)
 			}
-			
+
 			middleware.WriteJSON(w, map[string]interface{}{
 				"tenant": tenantID,
 				"role":   role,
@@ -1011,11 +1010,11 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 				middleware.WriteJSON(w, map[string]string{"error": "missing kind parameter"}, http.StatusBadRequest)
 				return
 			}
-			
+
 			tenantID, _ := middleware.GetTenantFromContext(r.Context())
 			nodes := queryAPI.GetAllNodes()
 			filtered := filterNodesByKind(nodes, kind, tenantID)
-			
+
 			middleware.WriteJSON(w, map[string]interface{}{
 				"kind":   kind,
 				"tenant": tenantID,
@@ -1028,7 +1027,7 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 	// ============================================
 	// TENANT MANAGEMENT (Admin only)
 	// ============================================
-	
+
 	// Get all tenants
 	mux.HandleFunc("/api/tenants", authMiddleware.Authenticate(
 		middleware.RequireRole("admin")(
@@ -1063,25 +1062,25 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 					middleware.WriteJSON(w, map[string]string{"error": "method not allowed"}, http.StatusMethodNotAllowed)
 					return
 				}
-				
+
 				var req struct {
-					ID          string `json:"id"`
-					Name        string `json:"name"`
-					Description string `json:"description"`
-					Quota       *enterprise.Quota `json:"quota"`
+					ID          string              `json:"id"`
+					Name        string              `json:"name"`
+					Description string              `json:"description"`
+					Quota       *enterprise.Quota   `json:"quota"`
 				}
-				
+
 				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 					middleware.WriteJSON(w, map[string]string{"error": "invalid request"}, http.StatusBadRequest)
 					return
 				}
-				
+
 				tenant, err := tenantManager.CreateTenant(req.ID, req.Name, req.Description, req.Quota)
 				if err != nil {
 					middleware.WriteJSON(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
 					return
 				}
-				
+
 				middleware.WriteJSON(w, tenant, http.StatusCreated)
 			},
 		),
@@ -1095,18 +1094,18 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 					middleware.WriteJSON(w, map[string]string{"error": "method not allowed"}, http.StatusMethodNotAllowed)
 					return
 				}
-				
+
 				tenantID := r.URL.Query().Get("id")
 				if tenantID == "" {
 					middleware.WriteJSON(w, map[string]string{"error": "missing tenant id"}, http.StatusBadRequest)
 					return
 				}
-				
+
 				if err := tenantManager.DeleteTenant(tenantID); err != nil {
 					middleware.WriteJSON(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
 					return
 				}
-				
+
 				middleware.WriteJSON(w, map[string]string{"status": "deleted"}, http.StatusOK)
 			},
 		),
@@ -1115,11 +1114,10 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 	// ============================================
 	// AI ENDPOINTS
 	// ============================================
-	
+
 	// Get AI anomalies
 	mux.HandleFunc("/api/ai/anomalies", authMiddleware.Authenticate(
 		func(w http.ResponseWriter, r *http.Request) {
-			// This would normally query the AI engine for current anomalies
 			middleware.WriteJSON(w, map[string]interface{}{
 				"status":    "ok",
 				"anomalies": []string{},
@@ -1151,11 +1149,10 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 	// ============================================
 	// AUDIT LOG (Admin only)
 	// ============================================
-	
+
 	mux.HandleFunc("/api/audit/logs", authMiddleware.Authenticate(
 		middleware.RequireRole("admin")(
 			func(w http.ResponseWriter, r *http.Request) {
-				// In production, this would query the audit log
 				middleware.WriteJSON(w, map[string]interface{}{
 					"logs":   []string{},
 					"status": "ok",
@@ -1187,7 +1184,7 @@ func filterNodesByTenant(nodes []*graph.Node, tenantID string) []*graph.Node {
 	if tenantID == "" {
 		return nodes
 	}
-	
+
 	result := make([]*graph.Node, 0)
 	for _, node := range nodes {
 		if node.Labels != nil {
@@ -1196,7 +1193,6 @@ func filterNodesByTenant(nodes []*graph.Node, tenantID string) []*graph.Node {
 				continue
 			}
 		}
-		// If no tenant label, only show for tenant-1 (default)
 		if tenantID == "tenant-1" {
 			result = append(result, node)
 		}
