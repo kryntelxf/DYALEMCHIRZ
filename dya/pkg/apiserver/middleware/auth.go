@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -38,6 +39,7 @@ type Claims struct {
 
 // AuthMiddleware handles authentication
 type AuthMiddleware struct {
+	mu      sync.RWMutex
 	apiKeys map[string]*Claims // API Key -> Claims
 }
 
@@ -53,16 +55,7 @@ func NewAuthMiddleware() *AuthMiddleware {
 		Username: "admin",
 		TenantID: "tenant-1",
 		Role:     "admin",
-		Expires:  time.Now().Add(24 * time.Hour).Unix(),
-	}
-	
-	// Default tenant key
-	m.apiKeys["dya-tenant-1-key"] = &Claims{
-		UserID:   "tenant-user",
-		Username: "tenant-user",
-		TenantID: "tenant-1",
-		Role:     "user",
-		Expires:  time.Now().Add(24 * time.Hour).Unix(),
+		Expires:  time.Now().Add(365 * 24 * time.Hour).Unix(),
 	}
 	
 	return m
@@ -70,6 +63,9 @@ func NewAuthMiddleware() *AuthMiddleware {
 
 // GenerateAPIKey creates a new API key for a tenant
 func (m *AuthMiddleware) GenerateAPIKey(tenantID, userID, role string) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
 	key := fmt.Sprintf("dya-key-%s-%d", tenantID, time.Now().UnixNano())
 	m.apiKeys[key] = &Claims{
 		UserID:   userID,
@@ -86,29 +82,33 @@ func (m *AuthMiddleware) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get API key from header
 		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			// Try query param for simplicity (boleh dihapus nanti)
-			authHeader = r.URL.Query().Get("api_key")
-			if authHeader == "" {
-				http.Error(w, `{"error":"missing api key"}`, http.StatusUnauthorized)
-				return
-			}
+		var apiKey string
+		
+		if authHeader != "" {
+			apiKey = strings.TrimPrefix(authHeader, "Bearer ")
+			apiKey = strings.TrimPrefix(apiKey, "bearer ")
+		} else {
+			// Try query param for simplicity
+			apiKey = r.URL.Query().Get("api_key")
 		}
 		
-		// Remove Bearer prefix if exists
-		apiKey := strings.TrimPrefix(authHeader, "Bearer ")
-		apiKey = strings.TrimPrefix(apiKey, "bearer ")
+		if apiKey == "" {
+			WriteJSON(w, map[string]string{"error": "missing api key"}, http.StatusUnauthorized)
+			return
+		}
 		
-		// Validate
+		m.mu.RLock()
 		claims, ok := m.apiKeys[apiKey]
+		m.mu.RUnlock()
+		
 		if !ok {
-			http.Error(w, `{"error":"invalid api key"}`, http.StatusUnauthorized)
+			WriteJSON(w, map[string]string{"error": "invalid api key"}, http.StatusUnauthorized)
 			return
 		}
 		
 		// Check expiry
 		if claims.Expires < time.Now().Unix() {
-			http.Error(w, `{"error":"api key expired"}`, http.StatusUnauthorized)
+			WriteJSON(w, map[string]string{"error": "api key expired"}, http.StatusUnauthorized)
 			return
 		}
 		
@@ -131,7 +131,7 @@ func RequireRole(requiredRole string) func(http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			role, ok := r.Context().Value("role").(string)
 			if !ok {
-				http.Error(w, `{"error":"role not found"}`, http.StatusForbidden)
+				WriteJSON(w, map[string]string{"error": "role not found"}, http.StatusForbidden)
 				return
 			}
 			
@@ -142,36 +142,12 @@ func RequireRole(requiredRole string) func(http.HandlerFunc) http.HandlerFunc {
 			}
 			
 			if role != requiredRole {
-				http.Error(w, fmt.Sprintf(`{"error":"requires role: %s"}`, requiredRole), http.StatusForbidden)
+				WriteJSON(w, map[string]string{"error": fmt.Sprintf("requires role: %s", requiredRole)}, http.StatusForbidden)
 				return
 			}
 			
 			next(w, r)
 		}
-	}
-}
-
-// RequireTenant checks if tenant matches
-func RequireTenant(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := r.Context().Value("tenantID").(string)
-		if !ok {
-			http.Error(w, `{"error":"tenant not found"}`, http.StatusForbidden)
-			return
-		}
-		
-		// Check query param
-		queryTenant := r.URL.Query().Get("tenant")
-		if queryTenant != "" && queryTenant != tenantID {
-			// Check if admin
-			role, _ := r.Context().Value("role").(string)
-			if role != "admin" {
-				http.Error(w, `{"error":"access denied to this tenant"}`, http.StatusForbidden)
-				return
-			}
-		}
-		
-		next(w, r)
 	}
 }
 
