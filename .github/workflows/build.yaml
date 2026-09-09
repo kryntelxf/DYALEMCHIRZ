@@ -18,13 +18,16 @@ jobs:
         go-version: '1.21'
 
     - name: Build
+      working-directory: ./dya
       run: |
-        cd dya
-        go mod download
-        go build -v -o bin/dya-controller ./cmd/dya-controller
+        go mod init k8s.io/kubernetes/dya 2>/dev/null || true
+        go get k8s.io/klog/v2
+        go mod tidy
+        go build -v -o dya-controller ./cmd/dya-controller
+        ls -la
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
         name: dya-controller
-        path: dya/bin/dya-controller
+        path: dya/dya-controller
