@@ -35,6 +35,8 @@ import (
 	aipredictors "k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
+	"k8s.io/kubernetes/dya/pkg/developer"
+	"k8s.io/kubernetes/dya/pkg/developer/sdks"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
@@ -94,8 +96,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 11: Enterprise Platform                             ║")
-	fmt.Println("║   Version: 0.12.0                                           ║")
+	fmt.Println("║   Stage 12: Developer Platform                               ║")
+	fmt.Println("║   Version: 0.13.0                                           ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -240,6 +242,61 @@ func main() {
 	defer enterpriseEngine.Stop()
 	klog.Info("Enterprise Engine started successfully")
 
+	// DEVELOPER ENGINE
+	klog.Info("Creating Developer Engine...")
+	developerEngine := developer.NewEngine()
+
+	// Register official SDKs
+	officialSDKs := sdks.GetOfficialSDKs()
+	for _, sdk := range officialSDKs {
+		if s, ok := sdk.(developer.SDK); ok {
+			developerEngine.RegisterSDK(s)
+		}
+	}
+
+	// Register sample plugin
+	developerEngine.RegisterPlugin(developer.Plugin{
+		ID:          "plugin-monitor",
+		Name:        "Monitor Plugin",
+		Version:     "1.0.0",
+		Type:        "monitoring",
+		Author:      "DYALEMCHIRZ Team",
+		Enabled:     true,
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample template
+	developerEngine.RegisterTemplate(developer.Template{
+		ID:          "template-go",
+		Name:        "Go Service Template",
+		Type:        "service",
+		Path:        "/templates/go-service",
+		Description: "Template for Go microservices",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample tool
+	developerEngine.RegisterTool(developer.Tool{
+		ID:          "tool-dya-cli",
+		Name:        "DYALEMCHIRZ CLI",
+		Command:     "dya",
+		Description: "Command line tool for DYALEMCHIRZ",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample doc
+	developerEngine.RegisterDoc(developer.Doc{
+		ID:          "doc-api",
+		Title:       "API Reference",
+		Path:        "/docs/api",
+		Description: "Complete API reference documentation",
+		UpdatedAt:   time.Now(),
+	})
+
+	developerEngine.Start()
+	defer developerEngine.Stop()
+	klog.Info("Developer Engine started successfully")
+
 	// LOAD GRAPH
 	klog.Info("Loading graph from storage...")
 	if _, err := storageStore.Load(ctx); err != nil {
@@ -270,10 +327,11 @@ func main() {
 	healthChecker.SetComponent("edge-engine", true)
 	healthChecker.SetComponent("knowledge-engine", true)
 	healthChecker.SetComponent("enterprise-engine", true)
+	healthChecker.SetComponent("developer-engine", true)
 	healthChecker.SetReady(true)
 
 	// START HEALTH SERVER
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine)
 
 	// RUN CONTROLLER
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -449,7 +507,7 @@ func (h *knowledgeEventHandler) Handle(e *event.Event) error {
 // HEALTH SERVER
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -948,6 +1006,49 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 				return "unhealthy"
 			}(),
 			enterpriseEngine != nil && enterpriseEngine.IsRunning())
+	})
+
+	// Developer endpoints
+	mux.HandleFunc("/api/developer/sdks", func(w http.ResponseWriter, r *http.Request) {
+		sdks := developerEngine.GetSDKs()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"sdks\": %v}\n", sdks)
+	})
+
+	mux.HandleFunc("/api/developer/plugins", func(w http.ResponseWriter, r *http.Request) {
+		plugins := developerEngine.GetPlugins()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"plugins\": %v}\n", plugins)
+	})
+
+	mux.HandleFunc("/api/developer/templates", func(w http.ResponseWriter, r *http.Request) {
+		templates := developerEngine.GetTemplates()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"templates\": %v}\n", templates)
+	})
+
+	mux.HandleFunc("/api/developer/tools", func(w http.ResponseWriter, r *http.Request) {
+		tools := developerEngine.GetTools()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"tools\": %v}\n", tools)
+	})
+
+	mux.HandleFunc("/api/developer/docs", func(w http.ResponseWriter, r *http.Request) {
+		docs := developerEngine.GetDocs()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"docs\": %v}\n", docs)
+	})
+
+	mux.HandleFunc("/api/developer/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
+			func() string {
+				if developerEngine != nil && developerEngine.IsRunning() {
+					return "healthy"
+				}
+				return "unhealthy"
+			}(),
+			developerEngine != nil && developerEngine.IsRunning())
 	})
 
 	addr := fmt.Sprintf(":%d", port)
