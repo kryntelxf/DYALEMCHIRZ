@@ -43,6 +43,9 @@ import (
 	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
 	edgehandlers "k8s.io/kubernetes/dya/pkg/edge/handlers"
 	edgesyncers "k8s.io/kubernetes/dya/pkg/edge/syncers"
+	"k8s.io/kubernetes/dya/pkg/enterprise"
+	"k8s.io/kubernetes/dya/pkg/enterprise/auditors"
+	enterprisehandlers "k8s.io/kubernetes/dya/pkg/enterprise/handlers"
 	"k8s.io/kubernetes/dya/pkg/event"
 	"k8s.io/kubernetes/dya/pkg/health"
 	"k8s.io/kubernetes/dya/pkg/impact"
@@ -91,8 +94,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 10: Knowledge Graph                                 ║")
-	fmt.Println("║   Version: 0.11.0                                           ║")
+	fmt.Println("║   Stage 11: Enterprise Platform                             ║")
+	fmt.Println("║   Version: 0.12.0                                           ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -204,6 +207,42 @@ func main() {
 	defer knowledgeEngine.Stop()
 	klog.Info("Knowledge Engine started successfully")
 
+	// ENTERPRISE ENGINE
+	klog.Info("Creating Enterprise Engine...")
+	enterpriseEngine := enterprise.NewEngine()
+	enterpriseEngine.RegisterAuditor(&auditors.BasicAuditor{})
+	enterpriseEngine.RegisterAPIHandler(&enterprisehandlers.BasicHandler{})
+	
+	// Register sample tenant
+	enterpriseEngine.RegisterTenant(enterprise.Tenant{
+		ID:          "tenant-1",
+		Name:        "Default Tenant",
+		Description: "Default enterprise tenant",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	})
+	
+	// Register sample role
+	enterpriseEngine.RegisterRole(enterprise.Role{
+		ID:          "role-1",
+		Name:        "Admin",
+		Permissions: []string{"read", "write", "delete", "admin"},
+		CreatedAt:   time.Now(),
+	})
+	
+	// Register sample organization
+	enterpriseEngine.RegisterOrganization(enterprise.Organization{
+		ID:          "org-1",
+		Name:        "Default Organization",
+		TenantID:    "tenant-1",
+		Members:     []string{"admin"},
+		CreatedAt:   time.Now(),
+	})
+	
+	enterpriseEngine.Start()
+	defer enterpriseEngine.Stop()
+	klog.Info("Enterprise Engine started successfully")
+
 	// LOAD GRAPH
 	klog.Info("Loading graph from storage...")
 	if _, err := storageStore.Load(ctx); err != nil {
@@ -233,10 +272,11 @@ func main() {
 	healthChecker.SetComponent("security-engine", true)
 	healthChecker.SetComponent("edge-engine", true)
 	healthChecker.SetComponent("knowledge-engine", true)
+	healthChecker.SetComponent("enterprise-engine", true)
 	healthChecker.SetReady(true)
 
 	// START HEALTH SERVER
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine)
 
 	// RUN CONTROLLER
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -412,7 +452,7 @@ func (h *knowledgeEventHandler) Handle(e *event.Event) error {
 // HEALTH SERVER
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -880,6 +920,37 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 				return "unhealthy"
 			}(),
 			knowledgeEngine != nil && knowledgeEngine.IsRunning())
+	})
+
+	// Enterprise endpoints
+	mux.HandleFunc("/api/enterprise/tenants", func(w http.ResponseWriter, r *http.Request) {
+		tenants := enterpriseEngine.GetTenants()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"tenants\": %v}\n", tenants)
+	})
+
+	mux.HandleFunc("/api/enterprise/roles", func(w http.ResponseWriter, r *http.Request) {
+		roles := enterpriseEngine.GetRoles()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"roles\": %v}\n", roles)
+	})
+
+	mux.HandleFunc("/api/enterprise/organizations", func(w http.ResponseWriter, r *http.Request) {
+		orgs := enterpriseEngine.GetOrganizations()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"organizations\": %v}\n", orgs)
+	})
+
+	mux.HandleFunc("/api/enterprise/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
+			func() string {
+				if enterpriseEngine != nil && enterpriseEngine.IsRunning() {
+					return "healthy"
+				}
+				return "unhealthy"
+			}(),
+			enterpriseEngine != nil && enterpriseEngine.IsRunning())
 	})
 
 	addr := fmt.Sprintf(":%d", port)
