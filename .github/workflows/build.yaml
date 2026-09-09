@@ -18,6 +18,7 @@ jobs:
     - name: Build
       run: |
         cd dya
+        go mod tidy
         go build -v -o dya-controller ./cmd/dya-controller
 
     - name: Upload
