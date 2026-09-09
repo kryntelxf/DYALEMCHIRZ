@@ -40,6 +40,8 @@ import (
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
+	"k8s.io/kubernetes/dya/pkg/ecosystem"
+	"k8s.io/kubernetes/dya/pkg/ecosystem/sdks"
 	"k8s.io/kubernetes/dya/pkg/edge"
 	"k8s.io/kubernetes/dya/pkg/edge/buffers"
 	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
@@ -96,8 +98,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 12: Developer Platform                               ║")
-	fmt.Println("║   Version: 0.13.0                                           ║")
+	fmt.Println("║   Stage 13: Ecosystem / SDK                                 ║")
+	fmt.Println("║   Version: 0.14.0                                           ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -246,7 +248,6 @@ func main() {
 	klog.Info("Creating Developer Engine...")
 	developerEngine := developer.NewEngine()
 
-	// Register official SDKs
 	officialSDKs := sdks.GetOfficialSDKs()
 	for _, sdk := range officialSDKs {
 		if s, ok := sdk.(developer.SDK); ok {
@@ -254,7 +255,6 @@ func main() {
 		}
 	}
 
-	// Register sample plugin
 	developerEngine.RegisterPlugin(developer.Plugin{
 		ID:          "plugin-monitor",
 		Name:        "Monitor Plugin",
@@ -265,7 +265,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample template
 	developerEngine.RegisterTemplate(developer.Template{
 		ID:          "template-go",
 		Name:        "Go Service Template",
@@ -275,7 +274,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample tool
 	developerEngine.RegisterTool(developer.Tool{
 		ID:          "tool-dya-cli",
 		Name:        "DYALEMCHIRZ CLI",
@@ -284,7 +282,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample doc
 	developerEngine.RegisterDoc(developer.Doc{
 		ID:          "doc-api",
 		Title:       "API Reference",
@@ -296,6 +293,89 @@ func main() {
 	developerEngine.Start()
 	defer developerEngine.Stop()
 	klog.Info("Developer Engine started successfully")
+
+	// ECOSYSTEM ENGINE
+	klog.Info("Creating Ecosystem Engine...")
+	ecosystemEngine := ecosystem.NewEngine()
+
+	// Register official SDKs
+	officialEcosystemSDKs := ecosystemsdks.GetOfficialSDKs()
+	for _, sdk := range officialEcosystemSDKs {
+		if s, ok := sdk.(ecosystem.SDK); ok {
+			ecosystemEngine.RegisterSDK(s)
+		}
+	}
+
+	// Register sample plugins
+	ecosystemEngine.RegisterPlugin(ecosystem.Plugin{
+		ID:          "plugin-kafka",
+		Name:        "Kafka Integration",
+		Type:        "integration",
+		Author:      "DYALEMCHIRZ Team",
+		Version:     "1.0.0",
+		Repository:  "https://github.com/kryntelxf/dya-plugin-kafka",
+		Downloads:   1500,
+		Rating:      4.8,
+		CreatedAt:   time.Now(),
+	})
+
+	ecosystemEngine.RegisterPlugin(ecosystem.Plugin{
+		ID:          "plugin-prometheus",
+		Name:        "Prometheus Integration",
+		Type:        "monitoring",
+		Author:      "DYALEMCHIRZ Team",
+		Version:     "1.0.0",
+		Repository:  "https://github.com/kryntelxf/dya-plugin-prometheus",
+		Downloads:   2300,
+		Rating:      4.9,
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample integration
+	ecosystemEngine.RegisterIntegration(ecosystem.Integration{
+		ID:            "integration-aws",
+		Name:          "AWS Cloud Integration",
+		Partner:       "Amazon Web Services",
+		Type:          "cloud",
+		Description:   "Integration with AWS services",
+		Documentation: "https://docs.dyalemchirz.com/integrations/aws",
+		Status:        "stable",
+		CreatedAt:     time.Now(),
+	})
+
+	// Register sample example
+	ecosystemEngine.RegisterExample(ecosystem.Example{
+		ID:          "example-go",
+		Name:        "Go Microservice Example",
+		Language:    "go",
+		Path:        "/examples/go-microservice",
+		Description: "Example of a Go microservice with DYALEMCHIRZ",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register sample guide
+	ecosystemEngine.RegisterGuide(ecosystem.Guide{
+		ID:          "guide-getting-started",
+		Title:       "Getting Started Guide",
+		Category:    "getting-started",
+		Path:        "/guides/getting-started",
+		Description: "How to get started with DYALEMCHIRZ",
+		UpdatedAt:   time.Now(),
+	})
+
+	// Register sample partner
+	ecosystemEngine.RegisterPartner(ecosystem.Partner{
+		ID:          "partner-google",
+		Name:        "Google Cloud",
+		Website:     "https://cloud.google.com",
+		Description: "Google Cloud Platform integration partner",
+		Status:      "active",
+		CreatedAt:   time.Now(),
+	})
+
+	ecosystemEngine.Start()
+	defer ecosystemEngine.Stop()
+	klog.Info("Ecosystem Engine started successfully")
 
 	// LOAD GRAPH
 	klog.Info("Loading graph from storage...")
@@ -328,10 +408,11 @@ func main() {
 	healthChecker.SetComponent("knowledge-engine", true)
 	healthChecker.SetComponent("enterprise-engine", true)
 	healthChecker.SetComponent("developer-engine", true)
+	healthChecker.SetComponent("ecosystem-engine", true)
 	healthChecker.SetReady(true)
 
 	// START HEALTH SERVER
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine, ecosystemEngine)
 
 	// RUN CONTROLLER
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -507,7 +588,7 @@ func (h *knowledgeEventHandler) Handle(e *event.Event) error {
 // HEALTH SERVER
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine, ecosystemEngine *ecosystem.Engine) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -1049,6 +1130,55 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 				return "unhealthy"
 			}(),
 			developerEngine != nil && developerEngine.IsRunning())
+	})
+
+	// Ecosystem endpoints
+	mux.HandleFunc("/api/ecosystem/sdks", func(w http.ResponseWriter, r *http.Request) {
+		sdks := ecosystemEngine.GetSDKs()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"sdks\": %v}\n", sdks)
+	})
+
+	mux.HandleFunc("/api/ecosystem/plugins", func(w http.ResponseWriter, r *http.Request) {
+		plugins := ecosystemEngine.GetPlugins()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"plugins\": %v}\n", plugins)
+	})
+
+	mux.HandleFunc("/api/ecosystem/integrations", func(w http.ResponseWriter, r *http.Request) {
+		integrations := ecosystemEngine.GetIntegrations()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"integrations\": %v}\n", integrations)
+	})
+
+	mux.HandleFunc("/api/ecosystem/examples", func(w http.ResponseWriter, r *http.Request) {
+		examples := ecosystemEngine.GetExamples()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"examples\": %v}\n", examples)
+	})
+
+	mux.HandleFunc("/api/ecosystem/guides", func(w http.ResponseWriter, r *http.Request) {
+		guides := ecosystemEngine.GetGuides()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"guides\": %v}\n", guides)
+	})
+
+	mux.HandleFunc("/api/ecosystem/partners", func(w http.ResponseWriter, r *http.Request) {
+		partners := ecosystemEngine.GetPartners()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"partners\": %v}\n", partners)
+	})
+
+	mux.HandleFunc("/api/ecosystem/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
+			func() string {
+				if ecosystemEngine != nil && ecosystemEngine.IsRunning() {
+					return "healthy"
+				}
+				return "unhealthy"
+			}(),
+			ecosystemEngine != nil && ecosystemEngine.IsRunning())
 	})
 
 	addr := fmt.Sprintf(":%d", port)
