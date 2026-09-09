@@ -16,17 +16,18 @@ limitations under the License.
 
 package auditors
 
-import (
-	"k8s.io/klog/v2"
-)
+import "k8s.io/klog/v2"
 
+// BasicAuditor is a basic auditor implementation
 type BasicAuditor struct{}
 
-func (a *BasicAuditor) Name() string {
-	return "basic-auditor"
+// Audit audits an event
+func (a *BasicAuditor) Audit(event interface{}) error {
+	klog.V(4).Infof("Auditing event: %+v", event)
+	return nil
 }
 
-func (a *BasicAuditor) Audit(event interface{}) error {
-	klog.V(4).Info("BasicAuditor auditing event")
-	return nil
+// Name returns the auditor name
+func (a *BasicAuditor) Name() string {
+	return "basic-auditor"
 }
