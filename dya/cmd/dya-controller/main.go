@@ -36,12 +36,12 @@ import (
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/developer"
-	"k8s.io/kubernetes/dya/pkg/developer/sdks"
+	developersdks "k8s.io/kubernetes/dya/pkg/developer/sdks"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin"
 	dtanalyzers "k8s.io/kubernetes/dya/pkg/digitaltwin/analyzers"
 	"k8s.io/kubernetes/dya/pkg/digitaltwin/simulators"
 	"k8s.io/kubernetes/dya/pkg/ecosystem"
-	"k8s.io/kubernetes/dya/pkg/ecosystem/sdks"
+	ecosystemsdks "k8s.io/kubernetes/dya/pkg/ecosystem/sdks"
 	"k8s.io/kubernetes/dya/pkg/edge"
 	"k8s.io/kubernetes/dya/pkg/edge/buffers"
 	edgeenforcers "k8s.io/kubernetes/dya/pkg/edge/enforcers"
@@ -248,7 +248,7 @@ func main() {
 	klog.Info("Creating Developer Engine...")
 	developerEngine := developer.NewEngine()
 
-	officialSDKs := sdks.GetOfficialSDKs()
+	officialSDKs := developersdks.GetOfficialSDKs()
 	for _, sdk := range officialSDKs {
 		if s, ok := sdk.(developer.SDK); ok {
 			developerEngine.RegisterSDK(s)
@@ -306,7 +306,6 @@ func main() {
 		}
 	}
 
-	// Register sample plugins
 	ecosystemEngine.RegisterPlugin(ecosystem.Plugin{
 		ID:          "plugin-kafka",
 		Name:        "Kafka Integration",
@@ -331,7 +330,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample integration
 	ecosystemEngine.RegisterIntegration(ecosystem.Integration{
 		ID:            "integration-aws",
 		Name:          "AWS Cloud Integration",
@@ -343,7 +341,6 @@ func main() {
 		CreatedAt:     time.Now(),
 	})
 
-	// Register sample example
 	ecosystemEngine.RegisterExample(ecosystem.Example{
 		ID:          "example-go",
 		Name:        "Go Microservice Example",
@@ -353,7 +350,6 @@ func main() {
 		CreatedAt:   time.Now(),
 	})
 
-	// Register sample guide
 	ecosystemEngine.RegisterGuide(ecosystem.Guide{
 		ID:          "guide-getting-started",
 		Title:       "Getting Started Guide",
@@ -363,7 +359,6 @@ func main() {
 		UpdatedAt:   time.Now(),
 	})
 
-	// Register sample partner
 	ecosystemEngine.RegisterPartner(ecosystem.Partner{
 		ID:          "partner-google",
 		Name:        "Google Cloud",
