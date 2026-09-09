@@ -19,7 +19,7 @@ package handlers
 import (
 	"time"
 
-	"github.com/kryntelxf/DYALEMCHIRZ/dya/pkg/enterprise"
+	"k8s.io/kubernetes/dya/pkg/enterprise"
 )
 
 // BasicHandler is a basic API handler
