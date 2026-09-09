@@ -24,32 +24,32 @@ import (
 )
 
 type Engine struct {
-	mu              sync.RWMutex
-	licenses        []License
-	supportPlans    []SupportPlan
-	managedServices []ManagedService
+	mu                   sync.RWMutex
+	licenses             []License
+	supportPlans         []SupportPlan
+	managedServices      []ManagedService
 	professionalServices []ProfessionalService
-	partners        []Partner
-	commercialAPIs  []CommercialAPI
-	running         bool
+	partners             []Partner
+	commercialAPIs       []CommercialAPI
+	running              bool
 }
 
 type License struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
-	Type        string    `json:"type"` // enterprise, professional, community
+	Type        string    `json:"type"`
 	Features    []string  `json:"features"`
 	Price       string    `json:"price"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type SupportPlan struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Level       string    `json:"level"` // basic, premium, enterprise
-	ResponseTime string   `json:"responseTime"`
-	Hours       string    `json:"hours"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	Level        string    `json:"level"`
+	ResponseTime string    `json:"responseTime"`
+	Hours        string    `json:"hours"`
+	CreatedAt    time.Time `json:"createdAt"`
 }
 
 type ManagedService struct {
@@ -63,7 +63,7 @@ type ManagedService struct {
 type ProfessionalService struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
-	Type        string    `json:"type"` // consulting, training, implementation
+	Type        string    `json:"type"`
 	Description string    `json:"description"`
 	Price       string    `json:"price"`
 	CreatedAt   time.Time `json:"createdAt"`
@@ -72,7 +72,7 @@ type ProfessionalService struct {
 type Partner struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
-	Type        string    `json:"type"` // reseller, integrator, consultant
+	Type        string    `json:"type"`
 	Website     string    `json:"website"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
@@ -88,13 +88,13 @@ type CommercialAPI struct {
 
 func NewEngine() *Engine {
 	return &Engine{
-		licenses:        make([]License, 0),
-		supportPlans:    make([]SupportPlan, 0),
-		managedServices: make([]ManagedService, 0),
+		licenses:             make([]License, 0),
+		supportPlans:         make([]SupportPlan, 0),
+		managedServices:      make([]ManagedService, 0),
 		professionalServices: make([]ProfessionalService, 0),
-		partners:        make([]Partner, 0),
-		commercialAPIs:  make([]CommercialAPI, 0),
-		running:         false,
+		partners:             make([]Partner, 0),
+		commercialAPIs:       make([]CommercialAPI, 0),
+		running:              false,
 	}
 }
 
@@ -158,6 +158,12 @@ func (e *Engine) Stop() {
 	}
 	e.running = false
 	klog.Info("Commercial Platform Engine stopped")
+}
+
+func (e *Engine) IsRunning() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.running
 }
 
 func (e *Engine) GetLicenses() []License {
