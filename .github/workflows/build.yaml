@@ -18,8 +18,6 @@ jobs:
     - name: Build
       run: |
         cd dya
-        go mod init k8s.io/kubernetes/dya
-        go mod tidy
         go build -v -o dya-controller ./cmd/dya-controller
 
     - name: Upload
