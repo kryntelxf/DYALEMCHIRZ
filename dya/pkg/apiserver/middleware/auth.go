@@ -40,7 +40,7 @@ type Claims struct {
 // AuthMiddleware handles authentication
 type AuthMiddleware struct {
 	mu      sync.RWMutex
-	apiKeys map[string]*Claims // API Key -> Claims
+	apiKeys map[string]*Claims
 }
 
 // NewAuthMiddleware creates a new auth middleware
@@ -48,8 +48,7 @@ func NewAuthMiddleware() *AuthMiddleware {
 	m := &AuthMiddleware{
 		apiKeys: make(map[string]*Claims),
 	}
-	
-	// Default admin key (GANTI DI PRODUCTION!)
+
 	m.apiKeys["dya-admin-key-2026"] = &Claims{
 		UserID:   "admin",
 		Username: "admin",
@@ -57,15 +56,15 @@ func NewAuthMiddleware() *AuthMiddleware {
 		Role:     "admin",
 		Expires:  time.Now().Add(365 * 24 * time.Hour).Unix(),
 	}
-	
+
 	return m
 }
 
-// GenerateAPIKey creates a new API key for a tenant
+// GenerateAPIKey creates a new API key
 func (m *AuthMiddleware) GenerateAPIKey(tenantID, userID, role string) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	key := fmt.Sprintf("dya-key-%s-%d", tenantID, time.Now().UnixNano())
 	m.apiKeys[key] = &Claims{
 		UserID:   userID,
@@ -80,47 +79,43 @@ func (m *AuthMiddleware) GenerateAPIKey(tenantID, userID, role string) string {
 // Authenticate middleware
 func (m *AuthMiddleware) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Get API key from header
 		authHeader := r.Header.Get("Authorization")
 		var apiKey string
-		
+
 		if authHeader != "" {
 			apiKey = strings.TrimPrefix(authHeader, "Bearer ")
 			apiKey = strings.TrimPrefix(apiKey, "bearer ")
 		} else {
-			// Try query param for simplicity
 			apiKey = r.URL.Query().Get("api_key")
 		}
-		
+
 		if apiKey == "" {
 			WriteJSON(w, map[string]string{"error": "missing api key"}, http.StatusUnauthorized)
 			return
 		}
-		
+
 		m.mu.RLock()
 		claims, ok := m.apiKeys[apiKey]
 		m.mu.RUnlock()
-		
+
 		if !ok {
 			WriteJSON(w, map[string]string{"error": "invalid api key"}, http.StatusUnauthorized)
 			return
 		}
-		
-		// Check expiry
+
 		if claims.Expires < time.Now().Unix() {
 			WriteJSON(w, map[string]string{"error": "api key expired"}, http.StatusUnauthorized)
 			return
 		}
-		
-		// Inject claims into context
+
 		ctx := context.WithValue(r.Context(), "claims", claims)
 		ctx = context.WithValue(ctx, "tenantID", claims.TenantID)
 		ctx = context.WithValue(ctx, "userID", claims.UserID)
 		ctx = context.WithValue(ctx, "role", claims.Role)
-		
-		klog.V(4).Infof("Authenticated: user=%s tenant=%s role=%s", 
+
+		klog.V(4).Infof("Authenticated: user=%s tenant=%s role=%s",
 			claims.UserID, claims.TenantID, claims.Role)
-		
+
 		next(w, r.WithContext(ctx))
 	}
 }
@@ -134,19 +129,13 @@ func RequireRole(requiredRole string) func(http.HandlerFunc) http.HandlerFunc {
 				WriteJSON(w, map[string]string{"error": "role not found"}, http.StatusForbidden)
 				return
 			}
-			
-			// Admin can do anything
-			if role == "admin" {
+
+			if role == "admin" || role == requiredRole {
 				next(w, r)
 				return
 			}
-			
-			if role != requiredRole {
-				WriteJSON(w, map[string]string{"error": fmt.Sprintf("requires role: %s", requiredRole)}, http.StatusForbidden)
-				return
-			}
-			
-			next(w, r)
+
+			WriteJSON(w, map[string]string{"error": fmt.Sprintf("requires role: %s", requiredRole)}, http.StatusForbidden)
 		}
 	}
 }
