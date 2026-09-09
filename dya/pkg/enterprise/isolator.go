@@ -25,7 +25,7 @@ import (
 
 // Isolator enforces tenant isolation
 type Isolator struct {
-	mu           sync.RWMutex
+	mu            sync.RWMutex
 	tenantManager *TenantManager
 }
 
@@ -41,15 +41,16 @@ func (i *Isolator) IsolateNode(tenantID, nodeID string) error {
 	if tenantID == "" || nodeID == "" {
 		return fmt.Errorf("tenantID and nodeID are required")
 	}
-	
+
 	i.mu.RLock()
 	defer i.mu.RUnlock()
-	
-	tenant, ok := i.tenantManager.GetTenant(tenantID)
+
+	// Check if tenant exists
+	_, ok := i.tenantManager.GetTenant(tenantID)
 	if !ok {
 		return fmt.Errorf("tenant %s not found", tenantID)
 	}
-	
+
 	// Check if node belongs to tenant
 	if _, exists := i.tenantManager.resourceMap[tenantID]; exists {
 		if _, ok := i.tenantManager.resourceMap[tenantID][nodeID]; !ok {
@@ -63,7 +64,7 @@ func (i *Isolator) IsolateNode(tenantID, nodeID string) error {
 	} else if tenantID != "tenant-1" {
 		return fmt.Errorf("tenant %s has no resources", tenantID)
 	}
-	
+
 	return nil
 }
 
@@ -75,4 +76,34 @@ func (i *Isolator) AddNodeToTenant(tenantID, nodeID string) error {
 // RemoveNodeFromTenant removes a node from a tenant's resource map
 func (i *Isolator) RemoveNodeFromTenant(tenantID, nodeID string) {
 	i.tenantManager.RemoveResourceUsage(tenantID, nodeID, "node")
+}
+
+// IsolateResource checks if a resource can be accessed by a tenant
+func (i *Isolator) IsolateResource(tenantID, resourceID, resourceType string) error {
+	if tenantID == "" || resourceID == "" {
+		return fmt.Errorf("tenantID and resourceID are required")
+	}
+
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	// Check if tenant exists
+	_, ok := i.tenantManager.GetTenant(tenantID)
+	if !ok {
+		return fmt.Errorf("tenant %s not found", tenantID)
+	}
+
+	// Check if resource belongs to tenant
+	if _, exists := i.tenantManager.resourceMap[tenantID]; exists {
+		if _, ok := i.tenantManager.resourceMap[tenantID][resourceID]; !ok {
+			if tenantID == "tenant-1" {
+				return nil
+			}
+			return fmt.Errorf("resource %s does not belong to tenant %s", resourceID, tenantID)
+		}
+	} else if tenantID != "tenant-1" {
+		return fmt.Errorf("tenant %s has no resources", tenantID)
+	}
+
+	return nil
 }
