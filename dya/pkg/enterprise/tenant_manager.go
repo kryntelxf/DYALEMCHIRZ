@@ -24,7 +24,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// Quota represents resource limits for a tenant
+// Quota represents resource limits
 type Quota struct {
 	MaxNodes       int `json:"maxNodes"`
 	MaxAssets      int `json:"maxAssets"`
@@ -32,7 +32,7 @@ type Quota struct {
 	MaxAIProcesses int `json:"maxAIProcesses"`
 }
 
-// QuotaUsed represents current usage for a tenant
+// QuotaUsed represents current usage
 type QuotaUsed struct {
 	Nodes       int `json:"nodes"`
 	Assets      int `json:"assets"`
@@ -40,7 +40,7 @@ type QuotaUsed struct {
 	AIProcesses int `json:"aiProcesses"`
 }
 
-// TenantWithQuota extends Tenant with quota information
+// TenantWithQuota extends Tenant with quota
 type TenantWithQuota struct {
 	Tenant
 	Quota     *Quota     `json:"quota"`
@@ -49,11 +49,11 @@ type TenantWithQuota struct {
 	UpdatedAt time.Time  `json:"updatedAt"`
 }
 
-// TenantManager manages tenants with isolation enforcement
+// TenantManager manages tenants
 type TenantManager struct {
 	mu          sync.RWMutex
 	tenants     map[string]*TenantWithQuota
-	ResourceMap map[string]map[string]bool `json:"resourceMap"` // PUBLIC for isolator access
+	ResourceMap map[string]map[string]bool `json:"resourceMap"`
 }
 
 // NewTenantManager creates a new tenant manager
@@ -64,7 +64,7 @@ func NewTenantManager() *TenantManager {
 	}
 }
 
-// CreateTenant creates a new tenant with quota
+// CreateTenant creates a new tenant
 func (tm *TenantManager) CreateTenant(id, name, description string, quota *Quota) (*TenantWithQuota, error) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -102,9 +102,7 @@ func (tm *TenantManager) CreateTenant(id, name, description string, quota *Quota
 	tm.tenants[id] = tenant
 	tm.ResourceMap[id] = make(map[string]bool)
 
-	klog.Infof("Created tenant: %s (ID: %s, quota: nodes=%d, assets=%d)",
-		name, id, quota.MaxNodes, quota.MaxAssets)
-
+	klog.Infof("Created tenant: %s (ID: %s)", name, id)
 	return tenant, nil
 }
 
@@ -168,7 +166,7 @@ func (tm *TenantManager) CanAddResource(tenantID, resourceType string) bool {
 	}
 }
 
-// AddResourceUsage increases usage for a tenant
+// AddResourceUsage adds resource usage
 func (tm *TenantManager) AddResourceUsage(tenantID, resourceID, resourceType string) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -179,7 +177,7 @@ func (tm *TenantManager) AddResourceUsage(tenantID, resourceID, resourceType str
 	}
 
 	if !tm.canAddResourceLocked(tenantID, resourceType) {
-		return fmt.Errorf("quota exceeded for %s in tenant %s", resourceType, tenantID)
+		return fmt.Errorf("quota exceeded for %s", resourceType)
 	}
 
 	if tm.ResourceMap[tenantID] == nil {
@@ -199,12 +197,10 @@ func (tm *TenantManager) AddResourceUsage(tenantID, resourceID, resourceType str
 	}
 
 	tenant.UpdatedAt = time.Now()
-
-	klog.V(4).Infof("Added resource %s to tenant %s (%s)", resourceID, tenantID, resourceType)
 	return nil
 }
 
-// RemoveResourceUsage decreases usage for a tenant
+// RemoveResourceUsage removes resource usage
 func (tm *TenantManager) RemoveResourceUsage(tenantID, resourceID, resourceType string) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -238,7 +234,6 @@ func (tm *TenantManager) RemoveResourceUsage(tenantID, resourceID, resourceType 
 	}
 
 	tenant.UpdatedAt = time.Now()
-	klog.V(4).Infof("Removed resource %s from tenant %s", resourceID, tenantID)
 }
 
 func (tm *TenantManager) canAddResourceLocked(tenantID, resourceType string) bool {
@@ -261,7 +256,7 @@ func (tm *TenantManager) canAddResourceLocked(tenantID, resourceType string) boo
 	}
 }
 
-// GetTenantUsage returns usage for a tenant
+// GetTenantUsage returns usage
 func (tm *TenantManager) GetTenantUsage(tenantID string) (*QuotaUsed, error) {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
