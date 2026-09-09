@@ -49,6 +49,7 @@ func NewAuthMiddleware() *AuthMiddleware {
 		apiKeys: make(map[string]*Claims),
 	}
 
+	// Default admin key (GANTI DI PRODUCTION!)
 	m.apiKeys["dya-admin-key-2026"] = &Claims{
 		UserID:   "admin",
 		Username: "admin",
