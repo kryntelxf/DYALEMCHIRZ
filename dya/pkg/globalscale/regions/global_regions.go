@@ -21,64 +21,64 @@ import "time"
 func GetGlobalRegions() []interface{} {
 	return []interface{}{
 		struct {
-			ID          string
-			Name        string
-			Location    string
-			Status      string
-			Capacity    int64
-			CreatedAt   time.Time
+			ID        string
+			Name      string
+			Location  string
+			Status    string
+			Capacity  int64
+			CreatedAt time.Time
 		}{
-			ID:          "region-us-east",
-			Name:        "US East",
-			Location:    "us-east-1",
-			Status:      "active",
-			Capacity:    1000000,
-			CreatedAt:   time.Now(),
+			ID:        "region-us-east",
+			Name:      "US East",
+			Location:  "us-east-1",
+			Status:    "active",
+			Capacity:  1000000,
+			CreatedAt: time.Now(),
 		},
 		struct {
-			ID          string
-			Name        string
-			Location    string
-			Status      string
-			Capacity    int64
-			CreatedAt   time.Time
+			ID        string
+			Name      string
+			Location  string
+			Status    string
+			Capacity  int64
+			CreatedAt time.Time
 		}{
-			ID:          "region-us-west",
-			Name:        "US West",
-			Location:    "us-west-1",
-			Status:      "active",
-			Capacity:    1000000,
-			CreatedAt:   time.Now(),
+			ID:        "region-us-west",
+			Name:      "US West",
+			Location:  "us-west-1",
+			Status:    "active",
+			Capacity:  1000000,
+			CreatedAt: time.Now(),
 		},
 		struct {
-			ID          string
-			Name        string
-			Location    string
-			Status      string
-			Capacity    int64
-			CreatedAt   time.Time
+			ID        string
+			Name      string
+			Location  string
+			Status    string
+			Capacity  int64
+			CreatedAt time.Time
 		}{
-			ID:          "region-eu-west",
-			Name:        "EU West",
-			Location:    "eu-west-1",
-			Status:      "active",
-			Capacity:    1000000,
-			CreatedAt:   time.Now(),
+			ID:        "region-eu-west",
+			Name:      "EU West",
+			Location:  "eu-west-1",
+			Status:    "active",
+			Capacity:  1000000,
+			CreatedAt: time.Now(),
 		},
 		struct {
-			ID          string
-			Name        string
-			Location    string
-			Status      string
-			Capacity    int64
-			CreatedAt   time.Time
+			ID        string
+			Name      string
+			Location  string
+			Status    string
+			Capacity  int64
+			CreatedAt time.Time
 		}{
-			ID:          "region-ap-southeast",
-			Name:        "AP Southeast",
-			Location:    "ap-southeast-1",
-			Status:      "active",
-			Capacity:    1000000,
-			CreatedAt:   time.Now(),
+			ID:        "region-ap-southeast",
+			Name:      "AP Southeast",
+			Location:  "ap-southeast-1",
+			Status:    "active",
+			Capacity:  1000000,
+			CreatedAt: time.Now(),
 		},
 	}
 }
