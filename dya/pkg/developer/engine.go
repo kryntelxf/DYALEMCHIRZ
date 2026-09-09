@@ -24,13 +24,13 @@ import (
 )
 
 type Engine struct {
-	mu          sync.RWMutex
-	sdks        []SDK
-	plugins     []Plugin
-	templates   []Template
-	tools       []Tool
-	docs        []Doc
-	running     bool
+	mu        sync.RWMutex
+	sdks      []SDK
+	plugins   []Plugin
+	templates []Template
+	tools     []Tool
+	docs      []Doc
+	running   bool
 }
 
 type SDK struct {
@@ -142,6 +142,12 @@ func (e *Engine) Stop() {
 	}
 	e.running = false
 	klog.Info("Developer Engine stopped")
+}
+
+func (e *Engine) IsRunning() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.running
 }
 
 func (e *Engine) GetSDKs() []SDK {
