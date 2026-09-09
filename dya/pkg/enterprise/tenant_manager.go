@@ -24,14 +24,23 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// TenantManager manages tenants with isolation enforcement
-type TenantManager struct {
-	mu          sync.RWMutex
-	tenants     map[string]*TenantWithQuota
-	resourceMap map[string]map[string]bool // tenantID -> resourceID -> exists
+// Quota represents resource limits for a tenant
+type Quota struct {
+	MaxNodes       int `json:"maxNodes"`
+	MaxAssets      int `json:"maxAssets"`
+	MaxEvents      int `json:"maxEvents"`
+	MaxAIProcesses int `json:"maxAIProcesses"`
 }
 
-// TenantWithQuota extends Tenant with quota
+// QuotaUsed represents current usage for a tenant
+type QuotaUsed struct {
+	Nodes       int `json:"nodes"`
+	Assets      int `json:"assets"`
+	Events      int `json:"events"`
+	AIProcesses int `json:"aiProcesses"`
+}
+
+// TenantWithQuota extends Tenant with quota information
 type TenantWithQuota struct {
 	Tenant
 	Quota     *Quota     `json:"quota"`
@@ -40,27 +49,18 @@ type TenantWithQuota struct {
 	UpdatedAt time.Time  `json:"updatedAt"`
 }
 
-// Quota represents resource limits
-type Quota struct {
-	MaxNodes       int `json:"maxNodes"`
-	MaxAssets      int `json:"maxAssets"`
-	MaxEvents      int `json:"maxEvents"`
-	MaxAIProcesses int `json:"maxAIProcesses"`
-}
-
-// QuotaUsed represents current usage
-type QuotaUsed struct {
-	Nodes       int `json:"nodes"`
-	Assets      int `json:"assets"`
-	Events      int `json:"events"`
-	AIProcesses int `json:"aiProcesses"`
+// TenantManager manages tenants with isolation enforcement
+type TenantManager struct {
+	mu          sync.RWMutex
+	tenants     map[string]*TenantWithQuota
+	ResourceMap map[string]map[string]bool `json:"resourceMap"` // PUBLIC for isolator access
 }
 
 // NewTenantManager creates a new tenant manager
 func NewTenantManager() *TenantManager {
 	return &TenantManager{
 		tenants:     make(map[string]*TenantWithQuota),
-		resourceMap: make(map[string]map[string]bool),
+		ResourceMap: make(map[string]map[string]bool),
 	}
 }
 
@@ -68,11 +68,11 @@ func NewTenantManager() *TenantManager {
 func (tm *TenantManager) CreateTenant(id, name, description string, quota *Quota) (*TenantWithQuota, error) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	
+
 	if _, exists := tm.tenants[id]; exists {
 		return nil, fmt.Errorf("tenant %s already exists", id)
 	}
-	
+
 	if quota == nil {
 		quota = &Quota{
 			MaxNodes:       100,
@@ -81,7 +81,7 @@ func (tm *TenantManager) CreateTenant(id, name, description string, quota *Quota
 			MaxAIProcesses: 10,
 		}
 	}
-	
+
 	tenant := &TenantWithQuota{
 		Tenant: Tenant{
 			ID:          id,
@@ -98,13 +98,13 @@ func (tm *TenantManager) CreateTenant(id, name, description string, quota *Quota
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	
+
 	tm.tenants[id] = tenant
-	tm.resourceMap[id] = make(map[string]bool)
-	
-	klog.Infof("Created tenant: %s (quota: nodes=%d, assets=%d)", 
-		name, quota.MaxNodes, quota.MaxAssets)
-	
+	tm.ResourceMap[id] = make(map[string]bool)
+
+	klog.Infof("Created tenant: %s (ID: %s, quota: nodes=%d, assets=%d)",
+		name, id, quota.MaxNodes, quota.MaxAssets)
+
 	return tenant, nil
 }
 
@@ -120,7 +120,7 @@ func (tm *TenantManager) GetTenant(id string) (*TenantWithQuota, bool) {
 func (tm *TenantManager) GetAllTenants() []*TenantWithQuota {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
-	
+
 	result := make([]*TenantWithQuota, 0, len(tm.tenants))
 	for _, t := range tm.tenants {
 		result = append(result, t)
@@ -132,14 +132,14 @@ func (tm *TenantManager) GetAllTenants() []*TenantWithQuota {
 func (tm *TenantManager) DeleteTenant(id string) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	
+
 	if _, exists := tm.tenants[id]; !exists {
 		return fmt.Errorf("tenant %s not found", id)
 	}
-	
+
 	delete(tm.tenants, id)
-	delete(tm.resourceMap, id)
-	
+	delete(tm.ResourceMap, id)
+
 	klog.Infof("Deleted tenant: %s", id)
 	return nil
 }
@@ -148,12 +148,12 @@ func (tm *TenantManager) DeleteTenant(id string) error {
 func (tm *TenantManager) CanAddResource(tenantID, resourceType string) bool {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
-	
+
 	tenant, ok := tm.tenants[tenantID]
 	if !ok {
 		return false
 	}
-	
+
 	switch resourceType {
 	case "node":
 		return tenant.Used.Nodes < tenant.Quota.MaxNodes
@@ -172,24 +172,21 @@ func (tm *TenantManager) CanAddResource(tenantID, resourceType string) bool {
 func (tm *TenantManager) AddResourceUsage(tenantID, resourceID, resourceType string) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	
+
 	tenant, ok := tm.tenants[tenantID]
 	if !ok {
 		return fmt.Errorf("tenant %s not found", tenantID)
 	}
-	
-	// Check quota
+
 	if !tm.canAddResourceLocked(tenantID, resourceType) {
 		return fmt.Errorf("quota exceeded for %s in tenant %s", resourceType, tenantID)
 	}
-	
-	// Add to resource map
-	if tm.resourceMap[tenantID] == nil {
-		tm.resourceMap[tenantID] = make(map[string]bool)
+
+	if tm.ResourceMap[tenantID] == nil {
+		tm.ResourceMap[tenantID] = make(map[string]bool)
 	}
-	tm.resourceMap[tenantID][resourceID] = true
-	
-	// Update usage
+	tm.ResourceMap[tenantID][resourceID] = true
+
 	switch resourceType {
 	case "node":
 		tenant.Used.Nodes++
@@ -200,9 +197,9 @@ func (tm *TenantManager) AddResourceUsage(tenantID, resourceID, resourceType str
 	case "ai":
 		tenant.Used.AIProcesses++
 	}
-	
+
 	tenant.UpdatedAt = time.Now()
-	
+
 	klog.V(4).Infof("Added resource %s to tenant %s (%s)", resourceID, tenantID, resourceType)
 	return nil
 }
@@ -211,18 +208,16 @@ func (tm *TenantManager) AddResourceUsage(tenantID, resourceID, resourceType str
 func (tm *TenantManager) RemoveResourceUsage(tenantID, resourceID, resourceType string) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	
+
 	tenant, ok := tm.tenants[tenantID]
 	if !ok {
 		return
 	}
-	
-	// Remove from resource map
-	if tm.resourceMap[tenantID] != nil {
-		delete(tm.resourceMap[tenantID], resourceID)
+
+	if tm.ResourceMap[tenantID] != nil {
+		delete(tm.ResourceMap[tenantID], resourceID)
 	}
-	
-	// Update usage
+
 	switch resourceType {
 	case "node":
 		if tenant.Used.Nodes > 0 {
@@ -241,18 +236,17 @@ func (tm *TenantManager) RemoveResourceUsage(tenantID, resourceID, resourceType 
 			tenant.Used.AIProcesses--
 		}
 	}
-	
+
 	tenant.UpdatedAt = time.Now()
 	klog.V(4).Infof("Removed resource %s from tenant %s", resourceID, tenantID)
 }
 
-// canAddResourceLocked checks if tenant can add resource (must be called with lock)
 func (tm *TenantManager) canAddResourceLocked(tenantID, resourceType string) bool {
 	tenant, ok := tm.tenants[tenantID]
 	if !ok {
 		return false
 	}
-	
+
 	switch resourceType {
 	case "node":
 		return tenant.Used.Nodes < tenant.Quota.MaxNodes
@@ -271,12 +265,12 @@ func (tm *TenantManager) canAddResourceLocked(tenantID, resourceType string) boo
 func (tm *TenantManager) GetTenantUsage(tenantID string) (*QuotaUsed, error) {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
-	
+
 	tenant, ok := tm.tenants[tenantID]
 	if !ok {
 		return nil, fmt.Errorf("tenant %s not found", tenantID)
 	}
-	
+
 	return &QuotaUsed{
 		Nodes:       tenant.Used.Nodes,
 		Assets:      tenant.Used.Assets,
