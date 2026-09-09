@@ -3,6 +3,8 @@ name: Build
 on:
   push:
     branches: [ "phase-1-foundation-from-master" ]
+  pull_request:
+    branches: [ "phase-1-foundation-from-master" ]
 
 jobs:
   build:
@@ -18,9 +20,8 @@ jobs:
     - name: Build
       run: |
         cd dya
-        go mod init k8s.io/kubernetes/dya
         go mod tidy
-        go build -o dya-controller ./cmd/dya-controller
+        go build -v -o dya-controller ./cmd/dya-controller
 
     - name: Upload
       uses: actions/upload-artifact@v4
