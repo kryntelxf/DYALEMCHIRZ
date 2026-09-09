@@ -154,7 +154,7 @@ func (e *Engine) Stop() {
 	klog.Info("Enterprise Engine stopped")
 }
 
-// IsRunning returns whether the engine is running
+// IsRunning returns whether running
 func (e *Engine) IsRunning() bool {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
@@ -182,18 +182,18 @@ func (e *Engine) GetOrganizations() []Organization {
 	return e.organizations
 }
 
-// Audit runs audit on an event
+// Audit runs audit
 func (e *Engine) Audit(event interface{}) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	for _, auditor := range e.auditors {
 		if err := auditor.Audit(event); err != nil {
-			klog.Errorf("Enterprise auditor %s failed: %v", auditor.Name(), err)
+			klog.Errorf("Auditor %s failed: %v", auditor.Name(), err)
 		}
 	}
 }
 
-// HandleAPI handles an API request
+// HandleAPI handles API request
 func (e *Engine) HandleAPI(request interface{}) []*APIResponse {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
