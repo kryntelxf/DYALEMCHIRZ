@@ -24,13 +24,13 @@ import (
 )
 
 type Engine struct {
-	mu           sync.RWMutex
-	tenants      []Tenant
-	roles        []Role
+	mu            sync.RWMutex
+	tenants       []Tenant
+	roles         []Role
 	organizations []Organization
-	auditors     []Auditor
-	apiHandlers  []APIHandler
-	running      bool
+	auditors      []Auditor
+	apiHandlers   []APIHandler
+	running       bool
 }
 
 type Tenant struct {
@@ -75,12 +75,12 @@ type APIResponse struct {
 
 func NewEngine() *Engine {
 	return &Engine{
-		tenants:      make([]Tenant, 0),
-		roles:        make([]Role, 0),
+		tenants:       make([]Tenant, 0),
+		roles:         make([]Role, 0),
 		organizations: make([]Organization, 0),
-		auditors:     make([]Auditor, 0),
-		apiHandlers:  make([]APIHandler, 0),
-		running:      false,
+		auditors:      make([]Auditor, 0),
+		apiHandlers:   make([]APIHandler, 0),
+		running:       false,
 	}
 }
 
@@ -137,6 +137,12 @@ func (e *Engine) Stop() {
 	}
 	e.running = false
 	klog.Info("Enterprise Engine stopped")
+}
+
+func (e *Engine) IsRunning() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.running
 }
 
 func (e *Engine) GetTenants() []Tenant {
