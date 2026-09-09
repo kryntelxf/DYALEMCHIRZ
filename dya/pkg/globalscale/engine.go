@@ -24,93 +24,93 @@ import (
 )
 
 type Engine struct {
-	mu             sync.RWMutex
-	regions        []Region
-	clusters       []Cluster
-	loadBalancers  []LoadBalancer
-	cacheNodes     []CacheNode
-	monitors       []Monitor
-	autoScalers    []AutoScaler
+	mu              sync.RWMutex
+	regions         []Region
+	clusters        []Cluster
+	loadBalancers   []LoadBalancer
+	cacheNodes      []CacheNode
+	monitors        []Monitor
+	autoScalers     []AutoScaler
 	disasterRecovery []DisasterRecovery
-	running        bool
+	running         bool
 }
 
 type Region struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Location    string    `json:"location"`
-	Status      string    `json:"status"`
-	Capacity    int64     `json:"capacity"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Location  string    `json:"location"`
+	Status    string    `json:"status"`
+	Capacity  int64     `json:"capacity"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type Cluster struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Region      string    `json:"region"`
-	Nodes       int       `json:"nodes"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Region    string    `json:"region"`
+	Nodes     int       `json:"nodes"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type LoadBalancer struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Region      string    `json:"region"`
-	Endpoint    string    `json:"endpoint"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Region    string    `json:"region"`
+	Endpoint  string    `json:"endpoint"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type CacheNode struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Region      string    `json:"region"`
-	Size        int64     `json:"size"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Region    string    `json:"region"`
+	Size      int64     `json:"size"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type Monitor struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Region      string    `json:"region"`
-	Type        string    `json:"type"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Region    string    `json:"region"`
+	Type      string    `json:"type"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type AutoScaler struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Region      string    `json:"region"`
-	MinNodes    int       `json:"minNodes"`
-	MaxNodes    int       `json:"maxNodes"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Region    string    `json:"region"`
+	MinNodes  int       `json:"minNodes"`
+	MaxNodes  int       `json:"maxNodes"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type DisasterRecovery struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Region      string    `json:"region"`
-	BackupRegion string   `json:"backupRegion"`
-	RPO         string    `json:"rpo"`
-	RTO         string    `json:"rto"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	Region       string    `json:"region"`
+	BackupRegion string    `json:"backupRegion"`
+	RPO          string    `json:"rpo"`
+	RTO          string    `json:"rto"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"createdAt"`
 }
 
 func NewEngine() *Engine {
 	return &Engine{
-		regions:        make([]Region, 0),
-		clusters:       make([]Cluster, 0),
-		loadBalancers:  make([]LoadBalancer, 0),
-		cacheNodes:     make([]CacheNode, 0),
-		monitors:       make([]Monitor, 0),
-		autoScalers:    make([]AutoScaler, 0),
+		regions:          make([]Region, 0),
+		clusters:         make([]Cluster, 0),
+		loadBalancers:    make([]LoadBalancer, 0),
+		cacheNodes:       make([]CacheNode, 0),
+		monitors:         make([]Monitor, 0),
+		autoScalers:      make([]AutoScaler, 0),
 		disasterRecovery: make([]DisasterRecovery, 0),
-		running:        false,
+		running:          false,
 	}
 }
 
@@ -181,6 +181,12 @@ func (e *Engine) Stop() {
 	}
 	e.running = false
 	klog.Info("Global Scale Engine stopped")
+}
+
+func (e *Engine) IsRunning() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.running
 }
 
 func (e *Engine) GetRegions() []Region {
