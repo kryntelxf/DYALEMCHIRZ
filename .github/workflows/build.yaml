@@ -3,6 +3,8 @@ name: DYALEMCHIRZ CI
 on:
   push:
     branches: [ "phase-1-foundation-from-master" ]
+  pull_request:
+    branches: [ "phase-1-foundation-from-master" ]
 
 jobs:
   build:
@@ -15,18 +17,15 @@ jobs:
       with:
         go-version: '1.21'
 
-    - name: Build from dya folder
-      shell: bash
+    - name: Build DYALEMCHIRZ
+      working-directory: ./dya
       run: |
-        cd dya
-        go version
+        go mod init k8s.io/kubernetes/dya 2>/dev/null || true
+        go mod tidy
         go build -v -o dya-controller ./cmd/dya-controller
-        pwd
-        ls -la
 
-    - name: Upload artifact
+    - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: dya-controller
         path: dya/dya-controller
-        if-no-files-found: error
