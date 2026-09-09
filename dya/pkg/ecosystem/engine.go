@@ -24,25 +24,25 @@ import (
 )
 
 type Engine struct {
-	mu            sync.RWMutex
-	sdks          []SDK
-	plugins       []Plugin
-	integrations  []Integration
-	examples      []Example
-	guides        []Guide
-	partners      []Partner
-	running       bool
+	mu           sync.RWMutex
+	sdks         []SDK
+	plugins      []Plugin
+	integrations []Integration
+	examples     []Example
+	guides       []Guide
+	partners     []Partner
+	running      bool
 }
 
 type SDK struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Language    string    `json:"language"`
-	Version     string    `json:"version"`
-	Repository  string    `json:"repository"`
-	Documentation string  `json:"documentation"`
-	Status      string    `json:"status"` // stable, beta, experimental
-	CreatedAt   time.Time `json:"createdAt"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Language      string    `json:"language"`
+	Version       string    `json:"version"`
+	Repository    string    `json:"repository"`
+	Documentation string    `json:"documentation"`
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type Plugin struct {
@@ -58,14 +58,14 @@ type Plugin struct {
 }
 
 type Integration struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Partner     string    `json:"partner"`
-	Type        string    `json:"type"`
-	Description string    `json:"description"`
-	Documentation string  `json:"documentation"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Partner       string    `json:"partner"`
+	Type          string    `json:"type"`
+	Description   string    `json:"description"`
+	Documentation string    `json:"documentation"`
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type Example struct {
@@ -167,6 +167,12 @@ func (e *Engine) Stop() {
 	}
 	e.running = false
 	klog.Info("Ecosystem Engine stopped")
+}
+
+func (e *Engine) IsRunning() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.running
 }
 
 func (e *Engine) GetSDKs() []SDK {
