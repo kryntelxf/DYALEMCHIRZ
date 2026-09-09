@@ -24,12 +24,12 @@ import (
 )
 
 type Engine struct {
-	mu            sync.RWMutex
-	predictors    []Predictor
-	forecasters   []Forecaster
-	analyzers     []RiskAnalyzer
-	recommenders  []Recommender
-	running       bool
+	mu           sync.RWMutex
+	predictors   []Predictor
+	forecasters  []Forecaster
+	analyzers    []RiskAnalyzer
+	recommenders []Recommender
+	running      bool
 }
 
 type Predictor interface {
@@ -62,27 +62,27 @@ type Prediction struct {
 }
 
 type Forecast struct {
-	AssetID     string                 `json:"assetId"`
-	Metric      string                 `json:"metric"`
-	Values      []float64              `json:"values"`
-	Timestamps  []time.Time            `json:"timestamps"`
-	Confidence  float64                `json:"confidence"`
-	Timestamp   time.Time              `json:"timestamp"`
+	AssetID    string      `json:"assetId"`
+	Metric     string      `json:"metric"`
+	Values     []float64   `json:"values"`
+	Timestamps []time.Time `json:"timestamps"`
+	Confidence float64     `json:"confidence"`
+	Timestamp  time.Time   `json:"timestamp"`
 }
 
 type RiskAnalysis struct {
-	AssetID     string            `json:"assetId"`
-	RiskScore   float64           `json:"riskScore"`
-	Factors     map[string]float64 `json:"factors"`
-	Level       string            `json:"level"`
-	Timestamp   time.Time         `json:"timestamp"`
+	AssetID   string             `json:"assetId"`
+	RiskScore float64            `json:"riskScore"`
+	Factors   map[string]float64 `json:"factors"`
+	Level     string             `json:"level"`
+	Timestamp time.Time          `json:"timestamp"`
 }
 
 type Recommendation struct {
-	AssetID     string   `json:"assetId"`
-	Action      string   `json:"action"`
-	Description string   `json:"description"`
-	Priority    string   `json:"priority"`
+	AssetID     string    `json:"assetId"`
+	Action      string    `json:"action"`
+	Description string    `json:"description"`
+	Priority    string    `json:"priority"`
 	Timestamp   time.Time `json:"timestamp"`
 }
 
@@ -142,6 +142,12 @@ func (e *Engine) Stop() {
 	}
 	e.running = false
 	klog.Info("Predictive Engine stopped")
+}
+
+func (e *Engine) IsRunning() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.running
 }
 
 func (e *Engine) Predict(data interface{}) []*Prediction {
