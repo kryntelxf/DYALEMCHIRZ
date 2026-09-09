@@ -51,14 +51,8 @@ func (d *TenantAwareDiscoverer) DiscoverNodes(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to list nodes: %w", err)
 	}
-	
+
 	for _, node := range nodes.Items {
-		nodeLabels := node.Labels
-		if nodeLabels == nil {
-			nodeLabels = make(map[string]string)
-		}
-		nodeLabels["tenant"] = d.tenantID
-		
 		graphNode := &graph.Node{
 			ID:   fmt.Sprintf("node/%s", node.Name),
 			Name: node.Name,
@@ -74,12 +68,12 @@ func (d *TenantAwareDiscoverer) DiscoverNodes(ctx context.Context) error {
 				"pods":   node.Status.Capacity.Pods().String(),
 			},
 		}
-		
+
 		if err := d.graph.AddNode(graphNode); err != nil {
 			klog.Warningf("Failed to add node %s: %v", node.Name, err)
 		}
 	}
-	
+
 	klog.Infof("Discovered %d nodes for tenant %s", len(nodes.Items), d.tenantID)
 	return nil
 }
@@ -90,13 +84,13 @@ func (d *TenantAwareDiscoverer) DiscoverPods(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to list pods: %w", err)
 	}
-	
+
 	count := 0
 	for _, pod := range pods.Items {
 		if !d.isPodForTenant(&pod) {
 			continue
 		}
-		
+
 		podNode := &graph.Node{
 			ID:        fmt.Sprintf("pod/%s/%s", pod.Namespace, pod.Name),
 			Name:      pod.Name,
@@ -115,13 +109,12 @@ func (d *TenantAwareDiscoverer) DiscoverPods(ctx context.Context) error {
 				"namespace": pod.Namespace,
 			},
 		}
-		
+
 		if err := d.graph.AddNode(podNode); err != nil {
 			klog.Warningf("Failed to add pod %s: %v", pod.Name, err)
 			continue
 		}
-		
-		// Add edge from pod to node
+
 		if pod.Spec.NodeName != "" {
 			sourceID := fmt.Sprintf("pod/%s/%s", pod.Namespace, pod.Name)
 			targetID := fmt.Sprintf("node/%s", pod.Spec.NodeName)
@@ -129,10 +122,10 @@ func (d *TenantAwareDiscoverer) DiscoverPods(ctx context.Context) error {
 				klog.Warningf("Failed to add edge: %v", err)
 			}
 		}
-		
+
 		count++
 	}
-	
+
 	klog.Infof("Discovered %d pods for tenant %s", count, d.tenantID)
 	return nil
 }
@@ -143,13 +136,13 @@ func (d *TenantAwareDiscoverer) DiscoverServices(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to list services: %w", err)
 	}
-	
+
 	count := 0
 	for _, svc := range services.Items {
 		if !d.isServiceForTenant(&svc) {
 			continue
 		}
-		
+
 		svcNode := &graph.Node{
 			ID:        fmt.Sprintf("service/%s/%s", svc.Namespace, svc.Name),
 			Name:      svc.Name,
@@ -167,25 +160,15 @@ func (d *TenantAwareDiscoverer) DiscoverServices(ctx context.Context) error {
 				"clusterIP": svc.Spec.ClusterIP,
 			},
 		}
-		
+
 		if err := d.graph.AddNode(svcNode); err != nil {
 			klog.Warningf("Failed to add service %s: %v", svc.Name, err)
 			continue
 		}
-		
-		// Add edges from service to pods (via selector)
-		if svc.Spec.Selector != nil {
-			for key, value := range svc.Spec.Selector {
-				label := fmt.Sprintf("%s=%s", key, value)
-				if err := d.graph.AddEdge(svcNode.ID, "pod", "selects", fmt.Sprintf("Service %s selects pods with %s", svc.Name, label)); err != nil {
-					klog.Warningf("Failed to add edge for service selector: %v", err)
-				}
-			}
-		}
-		
+
 		count++
 	}
-	
+
 	klog.Infof("Discovered %d services for tenant %s", count, d.tenantID)
 	return nil
 }
@@ -197,11 +180,9 @@ func (d *TenantAwareDiscoverer) isPodForTenant(pod *v1.Pod) bool {
 			return true
 		}
 	}
-	
 	if d.tenantID == "tenant-1" {
 		return true
 	}
-	
 	return false
 }
 
@@ -212,11 +193,9 @@ func (d *TenantAwareDiscoverer) isServiceForTenant(svc *v1.Service) bool {
 			return true
 		}
 	}
-	
 	if d.tenantID == "tenant-1" {
 		return true
 	}
-	
 	return false
 }
 
@@ -225,22 +204,11 @@ func (d *TenantAwareDiscoverer) DiscoverAll(ctx context.Context) error {
 	if err := d.DiscoverNodes(ctx); err != nil {
 		return fmt.Errorf("failed to discover nodes: %w", err)
 	}
-	
 	if err := d.DiscoverPods(ctx); err != nil {
 		return fmt.Errorf("failed to discover pods: %w", err)
 	}
-	
 	if err := d.DiscoverServices(ctx); err != nil {
 		return fmt.Errorf("failed to discover services: %w", err)
 	}
-	
 	return nil
-}
-
-// DiscoverAllTenants discovers assets for all tenants
-func DiscoverAllTenants(ctx context.Context, client kubernetes.Interface, g *graph.Graph, tenantManager interface{}) error {
-	// This would iterate through all tenants and discover assets
-	// For now, we just discover for tenant-1
-	discoverer := NewTenantAwareDiscoverer(client, g, "tenant-1")
-	return discoverer.DiscoverAll(ctx)
 }
