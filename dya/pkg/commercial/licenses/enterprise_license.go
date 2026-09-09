@@ -20,12 +20,12 @@ import "time"
 
 func GetEnterpriseLicense() interface{} {
 	return struct {
-		ID          string
-		Name        string
-		Type        string
-		Features    []string
-		Price       string
-		CreatedAt   time.Time
+		ID        string
+		Name      string
+		Type      string
+		Features  []string
+		Price     string
+		CreatedAt time.Time
 	}{
 		ID:   "license-enterprise",
 		Name: "Enterprise License",
