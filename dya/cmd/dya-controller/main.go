@@ -34,6 +34,8 @@ import (
 	aidetectors "k8s.io/kubernetes/dya/pkg/ai/detectors"
 	aipredictors "k8s.io/kubernetes/dya/pkg/ai/predictors"
 	"k8s.io/kubernetes/dya/pkg/ai/scorers"
+	"k8s.io/kubernetes/dya/pkg/commercial"
+	"k8s.io/kubernetes/dya/pkg/commercial/licenses"
 	"k8s.io/kubernetes/dya/pkg/controller/assetgraph"
 	"k8s.io/kubernetes/dya/pkg/developer"
 	developersdks "k8s.io/kubernetes/dya/pkg/developer/sdks"
@@ -98,8 +100,8 @@ func main() {
 	fmt.Println("║   🚀  DYALEMCHIRZ CONTROLLER  🚀                             ║")
 	fmt.Println("║   AI-Native Resilience Operating Platform                    ║")
 	fmt.Println("║                                                              ║")
-	fmt.Println("║   Stage 13: Ecosystem / SDK                                 ║")
-	fmt.Println("║   Version: 0.14.0                                           ║")
+	fmt.Println("║   Stage 14: Commercial Platform                             ║")
+	fmt.Println("║   Version: 0.15.0                                           ║")
 	fmt.Println("║                                                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 
@@ -298,7 +300,6 @@ func main() {
 	klog.Info("Creating Ecosystem Engine...")
 	ecosystemEngine := ecosystem.NewEngine()
 
-	// Register official SDKs
 	officialEcosystemSDKs := ecosystemsdks.GetOfficialSDKs()
 	for _, sdk := range officialEcosystemSDKs {
 		if s, ok := sdk.(ecosystem.SDK); ok {
@@ -372,6 +373,95 @@ func main() {
 	defer ecosystemEngine.Stop()
 	klog.Info("Ecosystem Engine started successfully")
 
+	// COMMERCIAL PLATFORM ENGINE
+	klog.Info("Creating Commercial Platform Engine...")
+	commercialEngine := commercial.NewEngine()
+
+	// Register enterprise license
+	enterpriseLicense := licenses.GetEnterpriseLicense()
+	if l, ok := enterpriseLicense.(commercial.License); ok {
+		commercialEngine.RegisterLicense(l)
+	}
+
+	// Register support plans
+	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
+		ID:           "support-basic",
+		Name:         "Basic Support",
+		Level:        "basic",
+		ResponseTime: "24 hours",
+		Hours:        "Business hours",
+		CreatedAt:    time.Now(),
+	})
+
+	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
+		ID:           "support-premium",
+		Name:         "Premium Support",
+		Level:        "premium",
+		ResponseTime: "4 hours",
+		Hours:        "24/7",
+		CreatedAt:    time.Now(),
+	})
+
+	commercialEngine.RegisterSupportPlan(commercial.SupportPlan{
+		ID:           "support-enterprise",
+		Name:         "Enterprise Support",
+		Level:        "enterprise",
+		ResponseTime: "1 hour",
+		Hours:        "24/7 with SLA",
+		CreatedAt:    time.Now(),
+	})
+
+	// Register managed services
+	commercialEngine.RegisterManagedService(commercial.ManagedService{
+		ID:          "managed-basic",
+		Name:        "Basic Managed Service",
+		Description: "Basic managed service for DYALEMCHIRZ deployment",
+		Price:       "Contact Sales",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register professional services
+	commercialEngine.RegisterProfessionalService(commercial.ProfessionalService{
+		ID:          "prof-consulting",
+		Name:        "Consulting Services",
+		Type:        "consulting",
+		Description: "Expert consulting for DYALEMCHIRZ implementation",
+		Price:       "Contact Sales",
+		CreatedAt:   time.Now(),
+	})
+
+	commercialEngine.RegisterProfessionalService(commercial.ProfessionalService{
+		ID:          "prof-training",
+		Name:        "Training Services",
+		Type:        "training",
+		Description: "Comprehensive training for DYALEMCHIRZ platform",
+		Price:       "Contact Sales",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register partners
+	commercialEngine.RegisterPartner(commercial.Partner{
+		ID:          "partner-acme",
+		Name:        "ACME Consulting",
+		Type:        "consultant",
+		Website:     "https://acme.com",
+		CreatedAt:   time.Now(),
+	})
+
+	// Register commercial APIs
+	commercialEngine.RegisterCommercialAPI(commercial.CommercialAPI{
+		ID:          "api-enterprise",
+		Name:        "Enterprise API",
+		Endpoint:    "https://api.dyalemchirz.com/v1/enterprise",
+		Description: "Enterprise-grade API with advanced features",
+		Pricing:     "Contact Sales",
+		CreatedAt:   time.Now(),
+	})
+
+	commercialEngine.Start()
+	defer commercialEngine.Stop()
+	klog.Info("Commercial Platform Engine started successfully")
+
 	// LOAD GRAPH
 	klog.Info("Loading graph from storage...")
 	if _, err := storageStore.Load(ctx); err != nil {
@@ -404,10 +494,11 @@ func main() {
 	healthChecker.SetComponent("enterprise-engine", true)
 	healthChecker.SetComponent("developer-engine", true)
 	healthChecker.SetComponent("ecosystem-engine", true)
+	healthChecker.SetComponent("commercial-engine", true)
 	healthChecker.SetReady(true)
 
 	// START HEALTH SERVER
-	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine, ecosystemEngine)
+	go startHealthServer(healthPort, healthChecker, controller, impactAnalyzer, queryAPI, eventStore, aiEngine, resilienceEngine, recoveryOrchestrator, digitalTwinEngine, securityEngine, edgeEngine, knowledgeEngine, enterpriseEngine, developerEngine, ecosystemEngine, commercialEngine)
 
 	// RUN CONTROLLER
 	klog.Infof("Starting Asset Graph controller with %d workers...", workers)
@@ -425,7 +516,7 @@ func main() {
 }
 
 // ============================================
-// EVENT HANDLERS
+// EVENT HANDLERS (Tidak berubah - sama seperti sebelumnya)
 // ============================================
 
 type eventStoreHandler struct {
@@ -583,7 +674,7 @@ func (h *knowledgeEventHandler) Handle(e *event.Event) error {
 // HEALTH SERVER
 // ============================================
 
-func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine, ecosystemEngine *ecosystem.Engine) {
+func startHealthServer(port int, checker *health.Checker, controller *assetgraph.Controller, impactAnalyzer *impact.Analyzer, queryAPI *query.API, eventStore *event.Store, aiEngine *ai.Engine, resilienceEngine *resilience.Engine, recoveryOrchestrator *recovery.Orchestrator, digitalTwinEngine *digitaltwin.Engine, securityEngine *security.Engine, edgeEngine *edge.Engine, knowledgeEngine *knowledge.Engine, enterpriseEngine *enterprise.Engine, developerEngine *developer.Engine, ecosystemEngine *ecosystem.Engine, commercialEngine *commercial.Engine) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -1174,6 +1265,55 @@ func startHealthServer(port int, checker *health.Checker, controller *assetgraph
 				return "unhealthy"
 			}(),
 			ecosystemEngine != nil && ecosystemEngine.IsRunning())
+	})
+
+	// Commercial Platform endpoints
+	mux.HandleFunc("/api/commercial/licenses", func(w http.ResponseWriter, r *http.Request) {
+		licenses := commercialEngine.GetLicenses()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"licenses\": %v}\n", licenses)
+	})
+
+	mux.HandleFunc("/api/commercial/support", func(w http.ResponseWriter, r *http.Request) {
+		supportPlans := commercialEngine.GetSupportPlans()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"supportPlans\": %v}\n", supportPlans)
+	})
+
+	mux.HandleFunc("/api/commercial/services/managed", func(w http.ResponseWriter, r *http.Request) {
+		services := commercialEngine.GetManagedServices()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"managedServices\": %v}\n", services)
+	})
+
+	mux.HandleFunc("/api/commercial/services/professional", func(w http.ResponseWriter, r *http.Request) {
+		services := commercialEngine.GetProfessionalServices()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"professionalServices\": %v}\n", services)
+	})
+
+	mux.HandleFunc("/api/commercial/partners", func(w http.ResponseWriter, r *http.Request) {
+		partners := commercialEngine.GetPartners()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"partners\": %v}\n", partners)
+	})
+
+	mux.HandleFunc("/api/commercial/apis", func(w http.ResponseWriter, r *http.Request) {
+		apis := commercialEngine.GetCommercialAPIs()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"commercialAPIs\": %v}\n", apis)
+	})
+
+	mux.HandleFunc("/api/commercial/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"%s\", \"running\": %v}\n",
+			func() string {
+				if commercialEngine != nil && commercialEngine.IsRunning() {
+					return "healthy"
+				}
+				return "unhealthy"
+			}(),
+			commercialEngine != nil && commercialEngine.IsRunning())
 	})
 
 	addr := fmt.Sprintf(":%d", port)
