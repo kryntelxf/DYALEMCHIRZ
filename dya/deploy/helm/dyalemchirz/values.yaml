@@ -1,0 +1,79 @@
+# Default values for dyalemchirz
+
+replicaCount: 1
+
+image:
+  repository: dyalemchirz/controller
+  pullPolicy: IfNotPresent
+  tag: "0.17.0"
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: dyalemchirz.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Tenant configuration
+tenants:
+  - id: tenant-1
+    name: Production Tenant
+    description: Main production tenant
+    quota:
+      maxNodes: 100
+      maxAssets: 1000
+      maxEvents: 10000
+      maxAIProcesses: 10
+  - id: tenant-2
+    name: Staging Tenant
+    description: Staging/Testing tenant
+    quota:
+      maxNodes: 50
+      maxAssets: 500
+      maxEvents: 5000
+      maxAIProcesses: 5
+
+# API keys (GANTI DI PRODUCTION!)
+apiKeys:
+  admin: dya-admin-key-2026
+  tenant1: dya-tenant-1-key
+  tenant2: dya-tenant-2-key
+
+# Security
+security:
+  tls:
+    enabled: false
+  auth:
+    enabled: true
