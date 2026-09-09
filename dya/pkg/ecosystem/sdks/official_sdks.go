@@ -23,61 +23,61 @@ import (
 func GetOfficialSDKs() []interface{} {
 	return []interface{}{
 		struct {
-			ID          string
-			Name        string
-			Language    string
-			Version     string
-			Repository  string
+			ID            string
+			Name          string
+			Language      string
+			Version       string
+			Repository    string
 			Documentation string
-			Status      string
-			CreatedAt   time.Time
+			Status        string
+			CreatedAt     time.Time
 		}{
-			ID:           "sdk-go",
-			Name:         "Go SDK",
-			Language:     "go",
-			Version:      "1.0.0",
-			Repository:   "https://github.com/kryntelxf/dya-sdk-go",
+			ID:            "sdk-go",
+			Name:          "Go SDK",
+			Language:      "go",
+			Version:       "1.0.0",
+			Repository:    "https://github.com/kryntelxf/dya-sdk-go",
 			Documentation: "https://docs.dyalemchirz.com/sdk/go",
-			Status:       "stable",
-			CreatedAt:    time.Now(),
+			Status:        "stable",
+			CreatedAt:     time.Now(),
 		},
 		struct {
-			ID          string
-			Name        string
-			Language    string
-			Version     string
-			Repository  string
+			ID            string
+			Name          string
+			Language      string
+			Version       string
+			Repository    string
 			Documentation string
-			Status      string
-			CreatedAt   time.Time
+			Status        string
+			CreatedAt     time.Time
 		}{
-			ID:           "sdk-python",
-			Name:         "Python SDK",
-			Language:     "python",
-			Version:      "1.0.0",
-			Repository:   "https://github.com/kryntelxf/dya-sdk-python",
+			ID:            "sdk-python",
+			Name:          "Python SDK",
+			Language:      "python",
+			Version:       "1.0.0",
+			Repository:    "https://github.com/kryntelxf/dya-sdk-python",
 			Documentation: "https://docs.dyalemchirz.com/sdk/python",
-			Status:       "stable",
-			CreatedAt:    time.Now(),
+			Status:        "stable",
+			CreatedAt:     time.Now(),
 		},
 		struct {
-			ID          string
-			Name        string
-			Language    string
-			Version     string
-			Repository  string
+			ID            string
+			Name          string
+			Language      string
+			Version       string
+			Repository    string
 			Documentation string
-			Status      string
-			CreatedAt   time.Time
+			Status        string
+			CreatedAt     time.Time
 		}{
-			ID:           "sdk-java",
-			Name:         "Java SDK",
-			Language:     "java",
-			Version:      "1.0.0",
-			Repository:   "https://github.com/kryntelxf/dya-sdk-java",
+			ID:            "sdk-java",
+			Name:          "Java SDK",
+			Language:      "java",
+			Version:       "1.0.0",
+			Repository:    "https://github.com/kryntelxf/dya-sdk-java",
 			Documentation: "https://docs.dyalemchirz.com/sdk/java",
-			Status:       "beta",
-			CreatedAt:    time.Now(),
+			Status:        "beta",
+			CreatedAt:     time.Now(),
 		},
 	}
 }
