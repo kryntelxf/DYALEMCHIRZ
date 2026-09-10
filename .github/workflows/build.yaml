@@ -16,9 +16,8 @@ jobs:
         go-version: '1.21'
 
     - name: Build
+      working-directory: ./dya
       run: |
-        cd dya
-        go mod tidy
         go build -v -o dya-controller ./cmd/dya-controller
 
     - name: Upload
